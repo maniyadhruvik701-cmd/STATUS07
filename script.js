@@ -95,6 +95,7 @@ const navDataEntry = document.getElementById('nav-data-entry');
 const navReports = document.getElementById('nav-reports');
 const navPerformance = document.getElementById('nav-performance');
 const navPending = document.getElementById('nav-pending');
+const navOrders = document.getElementById('nav-orders');
 
 // To Do Report Elements
 const reportStartDate = document.getElementById('report-start-date');
@@ -116,6 +117,15 @@ const generatePendingBtn = document.getElementById('generate-pending-btn');
 const pendingResults = document.getElementById('pending-results');
 const pendingTableBody = document.getElementById('pending-table-body');
 
+// Order Report Elements
+const orderReportView = document.getElementById('order-report-view');
+const orderStartDate = document.getElementById('order-start-date');
+const orderEndDate = document.getElementById('order-end-date');
+const generateOrderBtn = document.getElementById('generate-order-btn');
+const orderResults = document.getElementById('order-results');
+const orderTableBody = document.getElementById('order-table-body');
+const orderTableFooter = document.getElementById('order-table-footer');
+
 // Modal Elements
 const optionsModal = document.getElementById('options-modal');
 const modalTitle = document.getElementById('modal-title');
@@ -129,8 +139,8 @@ let activeConfigKey = '';
 // Navigation
 function switchView(view) {
     localStorage.setItem(SAVE_KEY_VIEW, view);
-    [dataEntryView, reportsView, performanceView, pendingReportView].forEach(v => v.classList.add('hidden'));
-    [navDataEntry, navReports, navPerformance, navPending].forEach(n => n?.classList.remove('active'));
+    [dataEntryView, reportsView, performanceView, pendingReportView, orderReportView].forEach(v => v.classList.add('hidden'));
+    [navDataEntry, navReports, navPerformance, navPending, navOrders].forEach(n => n?.classList.remove('active'));
 
     if (view === 'data-entry') {
         dataEntryView.classList.remove('hidden');
@@ -153,6 +163,11 @@ function switchView(view) {
         navPending.classList.add('active');
         viewTitle.textContent = 'Pending Report';
         viewSubtitle.textContent = 'Summary of pending visits within a date range';
+    } else if (view === 'orders') {
+        orderReportView.classList.remove('hidden');
+        navOrders.classList.add('active');
+        viewTitle.textContent = 'Total Order Report';
+        viewSubtitle.textContent = 'Summary of orders by date';
     }
 }
 
@@ -160,6 +175,7 @@ navDataEntry.onclick = () => switchView('data-entry');
 navReports.onclick = () => switchView('reports');
 navPerformance.onclick = () => switchView('performance');
 navPending.onclick = () => switchView('pending');
+navOrders.onclick = () => switchView('orders');
 
 signinForm.onsubmit = (e) => { e.preventDefault(); doLogin(e); };
 signupForm.onsubmit = (e) => { e.preventDefault(); doLogin(e); };
@@ -251,6 +267,14 @@ document.addEventListener('click', (e) => {
 // Table Rendering
 function createRow(data, actualIndex) {
     const tr = document.createElement('tr');
+
+    // Sr. No Cell
+    const tdSr = document.createElement('td');
+    tdSr.textContent = actualIndex + 1;
+    tdSr.style.fontWeight = 'bold';
+    tdSr.style.color = 'var(--text-muted)';
+    tr.appendChild(tdSr);
+
     const fields = [
         { key: 'date', type: 'date' },
         { key: 'name', type: 'text' },
@@ -380,14 +404,23 @@ generateReportBtn.onclick = () => {
     const filtered = tableData.filter(r => r.followUp === d);
     reportResults.classList.remove('hidden');
     summaryTableBody.innerHTML = '';
+
+    let grandTotal = 0;
     dropdownConfig.statuses.forEach(s => {
         const count = filtered.filter(r => r.status === s).length;
         if (count > 0) {
+            grandTotal += count;
             const tr = document.createElement('tr');
             tr.innerHTML = `<td style="font-weight:600;">${s}</td><td style="text-align:center; color:var(--success); font-weight:800;">${count} To Do</td>`;
             summaryTableBody.appendChild(tr);
         }
     });
+
+    // Grand Total Row
+    const trTotal = document.createElement('tr');
+    trTotal.style.background = 'rgba(255, 255, 255, 0.05)';
+    trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
+    summaryTableBody.appendChild(trTotal);
 };
 
 generatePerfBtn.onclick = () => {
@@ -397,14 +430,23 @@ generatePerfBtn.onclick = () => {
     const filtered = tableData.filter(r => r.date >= start && r.date <= end);
     perfResults.classList.remove('hidden');
     perfTableBody.innerHTML = '';
+
+    let grandTotal = 0;
     dropdownConfig.statuses.forEach(s => {
         const count = filtered.filter(r => r.status === s).length;
         if (count > 0) {
+            grandTotal += count;
             const tr = document.createElement('tr');
             tr.innerHTML = `<td style="font-weight:600;">${s}</td><td style="text-align:center; color:var(--secondary); font-weight:800;">${count}</td>`;
             perfTableBody.appendChild(tr);
         }
     });
+
+    // Grand Total Row
+    const trTotal = document.createElement('tr');
+    trTotal.style.background = 'rgba(255, 255, 255, 0.05)';
+    trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
+    perfTableBody.appendChild(trTotal);
 };
 
 generatePendingBtn.onclick = () => {
@@ -425,15 +467,81 @@ generatePendingBtn.onclick = () => {
         <td style="text-align:center; color:var(--warning); font-weight:800; font-size: 1.2rem;">${count}</td>
     `;
     pendingTableBody.appendChild(tr);
+
+    // Grand Total (Same as count here since it's just Pending, but adding for consistency if needed or just leave as is since it's single status)
+    // User requested grand total. Since pending report only shows 'Pending' status count, the count IS the grand total.
+    // But let's add a visual Grand Total row if user strictly wants it.
+    const trTotal = document.createElement('tr');
+    trTotal.style.background = 'rgba(255, 255, 255, 0.05)';
+    trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800; font-size: 1.2rem;">${count}</td>`;
+    pendingTableBody.appendChild(trTotal);
+
+    // Populate Details Table
+    const detailsBody = document.getElementById('pending-details-body');
+    if (detailsBody) {
+        detailsBody.innerHTML = '';
+        filtered.forEach(row => {
+            const trDetail = document.createElement('tr');
+            trDetail.innerHTML = `
+                <td>${row.date}</td>
+                <td>${row.name || '-'}</td>
+                <td>${row.company || '-'}</td>
+                <td>${row.followUp}</td>
+                <td style="color: var(--warning); font-weight: 600;">${row.status}</td>
+                <td style="font-size: 0.85rem; color: var(--text-muted);">${row.comments || '-'}</td>
+            `;
+            detailsBody.appendChild(trDetail);
+        });
+    }
 };
 
-function checkRestore() {
-    if (localStorage.getItem(SAVE_KEY_AUTH) === 'true') {
-        authSection.classList.add('hidden');
-        dashboardSection.classList.remove('hidden');
-        const savedView = localStorage.getItem(SAVE_KEY_VIEW) || 'data-entry';
-        switchView(savedView);
+generateOrderBtn.onclick = () => {
+    const start = orderStartDate.value;
+    const end = orderEndDate.value;
+    if (!start || !end) return alert('Select Range');
+
+    // Filter by Order Date
+    const filtered = tableData.filter(r => r.orderDate >= start && r.orderDate <= end);
+
+    // Group by Order Date and Sum Total Qty
+    const summary = {};
+    let grandTotalQty = 0;
+
+    filtered.forEach(r => {
+        const date = r.orderDate;
+        const qty = parseInt(r.totalQty) || 0; // Handle non-numeric gracefully
+        if (!summary[date]) summary[date] = 0;
+        summary[date] += qty;
+        grandTotalQty += qty;
+    });
+
+    orderResults.classList.remove('hidden');
+    orderTableBody.innerHTML = '';
+    orderTableFooter.innerHTML = '';
+
+    // Sort dates
+    const sortedDates = Object.keys(summary).sort();
+
+    if (sortedDates.length === 0) {
+        orderTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding: 20px;">No orders found in this range.</td></tr>';
+    } else {
+        sortedDates.forEach(date => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight:600;">${date}</td>
+                <td style="text-align:center; font-weight:800;">${summary[date]}</td>
+            `;
+            orderTableBody.appendChild(tr);
+        });
     }
-}
+
+    // Grand Total Row in Footer
+    const trTotal = document.createElement('tr');
+    trTotal.innerHTML = `
+        <td style="font-weight:700; color: var(--success); font-size: 1.1rem; text-align: right; padding-right: 20px;">GRAND TOTAL</td>
+        <td style="text-align:center; color: var(--success); font-weight:800; font-size: 1.2rem;">${grandTotalQty}</td>
+    `;
+    orderTableFooter.appendChild(trTotal);
+};
 checkRestore();
 console.log('Premium Dashboard Ready');
