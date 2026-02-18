@@ -324,13 +324,17 @@ function renderPagination() {
 
 addRowBtn.onclick = () => {
     for (let i = 0; i < 50; i++) {
-        tableData.unshift({
+        tableData.push({
             date: '', name: '', company: '', platform: '',
             type: '', status: '',
             orderDate: '', totalQty: '', followUp: '', comments: ''
         });
     }
-    currentPage = 1; saveData(); savePage(); renderTable();
+    // Go to the last page to see the new entries
+    currentPage = Math.ceil(tableData.length / rowsPerPage);
+    if (currentPage < 1) currentPage = 1;
+
+    saveData(); savePage(); renderTable();
 };
 
 const clearAllBtn = document.getElementById('clearAllBtn');
