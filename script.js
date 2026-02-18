@@ -323,7 +323,8 @@ function renderPagination() {
 }
 
 addRowBtn.onclick = () => {
-    // Add new entries to the BOTTOM (push) - After the last entry
+    // Add new entries to the BOTTOM (push)
+    // This ensures existing entries at the top (index 0, 1, etc.) STAY at the top.
     for (let i = 0; i < 50; i++) {
         tableData.push({
             date: '', name: '', company: '', platform: '',
@@ -331,7 +332,9 @@ addRowBtn.onclick = () => {
             orderDate: '', totalQty: '', followUp: '', comments: ''
         });
     }
-    // Automatically go to the LAST page to show the newly added rows
+    // We stay on the current page so the user doesn't lose context, 
+    // or we can go to the last page. 
+    // Let's go to the last page to show the new blank rows as requested previously.
     currentPage = Math.ceil(tableData.length / rowsPerPage);
     if (currentPage < 1) currentPage = 1;
 
