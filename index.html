@@ -224,15 +224,17 @@
             </button>
           </div>
           <div id="pending-results" class="hidden">
-            <div class="glass-panel" style="margin-top: 30px; padding: 20px; display: none;">
+            <!-- Date-wise Summary Table -->
+            <div class="glass-panel" style="margin-top: 30px; padding: 20px;">
               <table style="min-width: auto; width: 100%;">
                 <thead>
                   <tr>
-                    <th style="color: var(--warning);">Status</th>
+                    <th style="color: var(--warning);">Date</th>
                     <th style="text-align: center; color: var(--warning);">Total Pending</th>
                   </tr>
                 </thead>
                 <tbody id="pending-table-body"></tbody>
+                <tfoot id="pending-table-footer" style="border-top: 2px solid var(--border);"></tfoot>
               </table>
             </div>
 
