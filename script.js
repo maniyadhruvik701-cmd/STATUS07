@@ -444,10 +444,11 @@ generatePerfBtn.onclick = () => {
 
     // Grand Total Row
     const trTotal = document.createElement('tr');
-    trTotal.style.background = 'rgba(255, 255, 255, 0.05)';
     trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
     perfTableBody.appendChild(trTotal);
 };
+
+const pendingTableFooter = document.getElementById('pending-table-footer');
 
 generatePendingBtn.onclick = () => {
     const start = pendingStartDate.value;
@@ -457,10 +458,51 @@ generatePendingBtn.onclick = () => {
     // Changing filter to use 'date' (Entry Date) instead of 'followUp' for better tracking
     const filtered = tableData.filter(r => (r.date >= start && r.date <= end) && r.status === 'Pending');
 
+    // Group by Date for Summary Table
+    const summary = {};
+    let grandTotal = 0;
+
+    filtered.forEach(r => {
+        const d = r.date;
+        if (!summary[d]) summary[d] = 0;
+        summary[d]++;
+        grandTotal++;
+    });
+
     pendingResults.classList.remove('hidden');
-    // We are no longer populating the summary table (pendingTableBody) as per user request.
     pendingTableBody.innerHTML = '';
 
+    // Check if footer exists, if not create logic (but we added it to HTML)
+    // Actually we need to select it. Added const at top of block.
+    // Use the newly added pendingTableFooter
+    const footer = document.getElementById('pending-table-footer');
+    if (footer) footer.innerHTML = '';
+
+    const sortedDates = Object.keys(summary).sort();
+
+    if (sortedDates.length === 0) {
+        pendingTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding: 20px;">No pending entries found.</td></tr>';
+    } else {
+        sortedDates.forEach(date => {
+            const count = summary[date];
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight:600;">${date}</td>
+                <td style="text-align:center; color:var(--warning); font-weight:800; font-size: 1.2rem;">${count}</td>
+            `;
+            pendingTableBody.appendChild(tr);
+        });
+    }
+
+    // Grand Total Row in Footer
+    if (footer) {
+        const trTotal = document.createElement('tr');
+        trTotal.innerHTML = `
+            <td style="font-weight:700; color: var(--primary); font-size: 1.1rem; text-align: right; padding-right: 20px;">GRAND TOTAL</td>
+            <td style="text-align:center; color:var(--primary); font-weight:800; font-size: 1.2rem;">${grandTotal}</td>
+        `;
+        footer.appendChild(trTotal);
+    }
     // Populate Details Table
     const detailsBody = document.getElementById('pending-details-body');
     if (detailsBody) {
