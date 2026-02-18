@@ -458,23 +458,8 @@ generatePendingBtn.onclick = () => {
     const filtered = tableData.filter(r => (r.date >= start && r.date <= end) && r.status === 'Pending');
 
     pendingResults.classList.remove('hidden');
+    // We are no longer populating the summary table (pendingTableBody) as per user request.
     pendingTableBody.innerHTML = '';
-
-    const count = filtered.length;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-        <td style="font-weight:600;">Pending</td>
-        <td style="text-align:center; color:var(--warning); font-weight:800; font-size: 1.2rem;">${count}</td>
-    `;
-    pendingTableBody.appendChild(tr);
-
-    // Grand Total (Same as count here since it's just Pending, but adding for consistency if needed or just leave as is since it's single status)
-    // User requested grand total. Since pending report only shows 'Pending' status count, the count IS the grand total.
-    // But let's add a visual Grand Total row if user strictly wants it.
-    const trTotal = document.createElement('tr');
-    trTotal.style.background = 'rgba(255, 255, 255, 0.05)';
-    trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800; font-size: 1.2rem;">${count}</td>`;
-    pendingTableBody.appendChild(trTotal);
 
     // Populate Details Table
     const detailsBody = document.getElementById('pending-details-body');
