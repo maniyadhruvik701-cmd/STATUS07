@@ -323,6 +323,7 @@ function renderPagination() {
 }
 
 addRowBtn.onclick = () => {
+    // Add new entries to the BOTTOM (push) - After the last entry
     for (let i = 0; i < 50; i++) {
         tableData.push({
             date: '', name: '', company: '', platform: '',
@@ -330,7 +331,7 @@ addRowBtn.onclick = () => {
             orderDate: '', totalQty: '', followUp: '', comments: ''
         });
     }
-    // Go to the last page to see the new entries
+    // Automatically go to the LAST page to show the newly added rows
     currentPage = Math.ceil(tableData.length / rowsPerPage);
     if (currentPage < 1) currentPage = 1;
 
