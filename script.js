@@ -414,7 +414,7 @@ generateReportBtn.onclick = () => {
             grandTotal += count;
             const tr = document.createElement('tr');
             const color = s === 'Pending' ? 'var(--warning)' : 'var(--success)';
-            tr.innerHTML = `<td style="font-weight:600;">${s}</td><td style="text-align:center; color:${color}; font-weight:800;">${count} બાકી</td>`;
+            tr.innerHTML = `<td style="font-weight:600;">${s}</td><td style="text-align:center; color:${color}; font-weight:800;">${count} To Do</td>`;
             summaryTableBody.appendChild(tr);
         }
     });
@@ -422,7 +422,7 @@ generateReportBtn.onclick = () => {
     // Grand Total Row
     const trTotal = document.createElement('tr');
     trTotal.style.background = 'rgba(255, 255, 255, 0.05)';
-    trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">કુલ TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
+    trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
     summaryTableBody.appendChild(trTotal);
 
     // Show Pending Entries Detail
@@ -559,42 +559,38 @@ generateOrderBtn.onclick = () => {
     // Filter by Order Date
     const filtered = tableData.filter(r => r.orderDate >= start && r.orderDate <= end);
 
-    // Group by Order Date and Sum Total Qty
-    const summary = {};
     let grandTotalQty = 0;
-
     filtered.forEach(r => {
-        const date = r.orderDate;
-        const qty = parseInt(r.totalQty) || 0; // Handle non-numeric gracefully
-        if (!summary[date]) summary[date] = 0;
-        summary[date] += qty;
-        grandTotalQty += qty;
+        grandTotalQty += parseInt(r.totalQty) || 0;
     });
 
     orderResults.classList.remove('hidden');
     orderTableBody.innerHTML = '';
     orderTableFooter.innerHTML = '';
 
-    // Sort dates
-    const sortedDates = Object.keys(summary).sort();
-
-    if (sortedDates.length === 0) {
-        orderTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding: 20px;">No orders found in this range.</td></tr>';
+    if (filtered.length === 0) {
+        orderTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">No orders found in this range.</td></tr>';
     } else {
-        sortedDates.forEach(date => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="font-weight:600;">${date}</td>
-                <td style="text-align:center; font-weight:800;">${summary[date]}</td>
-            `;
-            orderTableBody.appendChild(tr);
+        // Sort by order date
+        const sorted = [...filtered].sort((a, b) => (a.orderDate || '').localeCompare(b.orderDate || ''));
+        sorted.forEach(row => {
+            const qty = parseInt(row.totalQty) || 0;
+            if (qty > 0) {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td style="font-weight:600;">${row.orderDate}</td>
+                    <td>${row.name || '-'}</td>
+                    <td style="text-align:center; font-weight:800;">${qty}</td>
+                `;
+                orderTableBody.appendChild(tr);
+            }
         });
     }
 
     // Grand Total Row in Footer
     const trTotal = document.createElement('tr');
     trTotal.innerHTML = `
-        <td style="font-weight:700; color: var(--success); font-size: 1.1rem; text-align: right; padding-right: 20px;">GRAND TOTAL</td>
+        <td colspan="2" style="font-weight:700; color: var(--success); font-size: 1.1rem; text-align: right; padding-right: 20px;">GRAND TOTAL</td>
         <td style="text-align:center; color: var(--success); font-weight:800; font-size: 1.2rem;">${grandTotalQty}</td>
     `;
     orderTableFooter.appendChild(trTotal);
