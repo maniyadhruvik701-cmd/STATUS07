@@ -43,6 +43,21 @@ function saveConfig() {
 // Initialize Data
 let tableData = []; // Will be loaded from Firebase
 
+// Fix dates with wrong year (0026 -> 2026)
+function fixDates(data) {
+    const dateFields = ['date', 'orderDate', 'followUp'];
+    let changed = false;
+    data.forEach(row => {
+        dateFields.forEach(field => {
+            if (row[field] && row[field].includes('0026')) {
+                row[field] = row[field].replace('0026', '2026');
+                changed = true;
+            }
+        });
+    });
+    return changed;
+}
+
 // Listen for Data Changes - This makes it real-time across devices!
 const dataRef = ref(db, 'status_data');
 onValue(dataRef, (snapshot) => {
@@ -50,6 +65,10 @@ onValue(dataRef, (snapshot) => {
     if (data) {
         // Firebase returns objects for lists sometimes, ensure it's an array
         tableData = Array.isArray(data) ? data : Object.values(data);
+        // Auto-fix wrong year dates
+        if (fixDates(tableData)) {
+            saveData(); // Save corrected dates back to Firebase
+        }
     } else {
         tableData = [];
     }
@@ -350,9 +369,10 @@ function renderPagination() {
 addRowBtn.onclick = () => {
     // Add new entries to the BOTTOM (push)
     // This ensures existing entries at the top (index 0, 1, etc.) STAY at the top.
+    const today = new Date().toISOString().split('T')[0]; // e.g. 2026-02-25
     for (let i = 0; i < 50; i++) {
         tableData.push({
-            date: '', name: '', mobile: '', company: '', platform: '',
+            date: today, name: '', mobile: '', company: '', platform: '',
             type: '', status: '',
             orderDate: '', totalQty: '', followUp: '', comments: ''
         });
