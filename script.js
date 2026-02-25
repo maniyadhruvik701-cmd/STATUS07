@@ -278,6 +278,7 @@ function createRow(data, actualIndex) {
     const fields = [
         { key: 'date', type: 'date' },
         { key: 'name', type: 'text' },
+        { key: 'mobile', type: 'tel' },
         { key: 'company', type: 'text' },
         { key: 'platform', type: 'select', configKey: 'platforms', label: 'Platform' },
         { key: 'type', type: 'select', configKey: 'types', label: 'Type' },
@@ -351,7 +352,7 @@ addRowBtn.onclick = () => {
     // This ensures existing entries at the top (index 0, 1, etc.) STAY at the top.
     for (let i = 0; i < 50; i++) {
         tableData.push({
-            date: '', name: '', company: '', platform: '',
+            date: '', name: '', mobile: '', company: '', platform: '',
             type: '', status: '',
             orderDate: '', totalQty: '', followUp: '', comments: ''
         });
@@ -382,9 +383,9 @@ const exportBtn = document.getElementById('exportBtn');
 if (exportBtn) {
     exportBtn.onclick = () => {
         if (tableData.length === 0) return alert('No data to export');
-        const headers = ["Date", "Name", "Company", "Platform", "Type", "Status", "Order Date", "Total Qty", "Follow-up", "Comments"];
+        const headers = ["Date", "Name", "Mobile No", "Company", "Platform", "Type", "Status", "Order Date", "Total Qty", "Follow-up", "Comments"];
         const rows = tableData.map(r => [
-            r.date, r.name, r.company, r.platform, r.type, r.status, r.orderDate, r.totalQty, r.followUp, r.comments
+            r.date, r.name, r.mobile, r.company, r.platform, r.type, r.status, r.orderDate, r.totalQty, r.followUp, r.comments
         ]);
         let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
         const encodedUri = encodeURI(csvContent);
@@ -405,22 +406,37 @@ generateReportBtn.onclick = () => {
     reportResults.classList.remove('hidden');
     summaryTableBody.innerHTML = '';
 
-    let grandTotal = 0;
-    dropdownConfig.statuses.forEach(s => {
-        const count = filtered.filter(r => r.status === s).length;
-        if (count > 0) {
-            grandTotal += count;
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td style="font-weight:600;">${s}</td><td style="text-align:center; color:var(--success); font-weight:800;">${count} To Do</td>`;
-            summaryTableBody.appendChild(tr);
-        }
-    });
+    // Only show Pending count
+    const pendingCount = filtered.filter(r => r.status === 'Pending').length;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="font-weight:600; color: var(--warning);">Pending</td><td style="text-align:center; color:var(--warning); font-weight:800; font-size: 1.2rem;">${pendingCount}</td>`;
+    summaryTableBody.appendChild(tr);
 
-    // Grand Total Row
-    const trTotal = document.createElement('tr');
-    trTotal.style.background = 'rgba(255, 255, 255, 0.05)';
-    trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
-    summaryTableBody.appendChild(trTotal);
+    // Show Pending Entries Detail
+    const todoPendingBody = document.getElementById('todo-pending-body');
+    const todoPendingSection = document.getElementById('todo-pending-section');
+    if (todoPendingBody) {
+        todoPendingBody.innerHTML = '';
+        const pendingEntries = filtered.filter(r => r.status === 'Pending');
+        if (pendingEntries.length === 0) {
+            todoPendingSection.style.display = 'none';
+        } else {
+            todoPendingSection.style.display = '';
+            pendingEntries.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.date || '-'}</td>
+                    <td>${row.name || '-'}</td>
+                    <td>${row.mobile || '-'}</td>
+                    <td>${row.company || '-'}</td>
+                    <td>${row.followUp || '-'}</td>
+                    <td style="color: var(--warning); font-weight: 600;">${row.status}</td>
+                    <td style="font-size: 0.85rem; color: var(--text-muted);">${row.comments || '-'}</td>
+                `;
+                todoPendingBody.appendChild(tr);
+            });
+        }
+    }
 };
 
 generatePerfBtn.onclick = () => {
