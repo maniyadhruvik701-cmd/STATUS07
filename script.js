@@ -406,11 +406,24 @@ generateReportBtn.onclick = () => {
     reportResults.classList.remove('hidden');
     summaryTableBody.innerHTML = '';
 
-    // Only show Pending count
-    const pendingCount = filtered.filter(r => r.status === 'Pending').length;
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td style="font-weight:600; color: var(--warning);">Pending</td><td style="text-align:center; color:var(--warning); font-weight:800; font-size: 1.2rem;">${pendingCount}</td>`;
-    summaryTableBody.appendChild(tr);
+    // બધા status ની count બતાવો
+    let grandTotal = 0;
+    dropdownConfig.statuses.forEach(s => {
+        const count = filtered.filter(r => r.status === s).length;
+        if (count > 0) {
+            grandTotal += count;
+            const tr = document.createElement('tr');
+            const color = s === 'Pending' ? 'var(--warning)' : 'var(--success)';
+            tr.innerHTML = `<td style="font-weight:600;">${s}</td><td style="text-align:center; color:${color}; font-weight:800;">${count} બાકી</td>`;
+            summaryTableBody.appendChild(tr);
+        }
+    });
+
+    // Grand Total Row
+    const trTotal = document.createElement('tr');
+    trTotal.style.background = 'rgba(255, 255, 255, 0.05)';
+    trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">કુલ TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
+    summaryTableBody.appendChild(trTotal);
 
     // Show Pending Entries Detail
     const todoPendingBody = document.getElementById('todo-pending-body');
