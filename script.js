@@ -541,8 +541,8 @@ generateOrderBtn.onclick = () => {
     const end = orderEndDate.value;
     if (!start || !end) return alert('Select Range');
 
-    // Filter by Date (Entry Date), not Order Date
-    const filtered = tableData.filter(r => r.date >= start && r.date <= end && r.orderDate);
+    // Filter by Date (Entry Date)
+    const filtered = tableData.filter(r => r.date >= start && r.date <= end && (r.totalQty || '').toString().trim() !== '');
 
     let grandTotalQty = 0;
     filtered.forEach(r => {
@@ -557,15 +557,15 @@ generateOrderBtn.onclick = () => {
         orderTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">No orders found in this range.</td></tr>';
     } else {
 
-        // Sort by order date
-        const sorted = [...filtered].sort((a, b) => (a.orderDate || '').localeCompare(b.orderDate || ''));
+        // Sort by Entry Date
+        const sorted = [...filtered].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
         sorted.forEach(row => {
             let qtyStr = (row.totalQty || '').toString().trim();
             if (!qtyStr) qtyStr = '0'; // Default to 0 if blank
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="font-weight:600;">${row.orderDate}</td>
+                <td style="font-weight:600;">${row.date}</td>
                 <td>${row.name || '-'}</td>
                 <td style="text-align:center; font-weight:800;">${qtyStr === '0' ? '<span style="color:var(--text-muted)">-</span>' : qtyStr}</td>
             `;
