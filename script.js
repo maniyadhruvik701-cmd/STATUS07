@@ -541,8 +541,8 @@ generateOrderBtn.onclick = () => {
     const end = orderEndDate.value;
     if (!start || !end) return alert('Select Range');
 
-    // Filter by Order Date
-    const filtered = tableData.filter(r => r.orderDate >= start && r.orderDate <= end);
+    // Filter by Date (Entry Date), not Order Date
+    const filtered = tableData.filter(r => r.date >= start && r.date <= end && r.orderDate);
 
     let grandTotalQty = 0;
     filtered.forEach(r => {
