@@ -109,6 +109,7 @@ const logoutBtn = document.getElementById('logout-btn');
 const tableBody = document.getElementById('table-body');
 const addRowBtn = document.getElementById('addRowBtn');
 const paginationContainer = document.getElementById('pagination-controls');
+const searchInput = document.getElementById('searchInput');
 
 const navDataEntry = document.getElementById('nav-data-entry');
 const navReports = document.getElementById('nav-reports');
@@ -347,17 +348,49 @@ function createRow(data, actualIndex) {
 
 function renderTable() {
     tableBody.innerHTML = '';
-    const totalPages = Math.ceil(tableData.length / rowsPerPage);
+    const query = (searchInput ? searchInput.value.toLowerCase() : '');
+
+    // Filter logic
+    let displayData = tableData;
+    let originalIndices = tableData.map((_, i) => i);
+
+    if (query) {
+        displayData = [];
+        originalIndices = [];
+        tableData.forEach((row, index) => {
+            const searchableText = `${row.name || ''} ${row.mobile || ''} ${row.company || ''} ${row.city || ''} ${row.state || ''} ${row.date || ''}`.toLowerCase();
+            if (searchableText.includes(query)) {
+                displayData.push(row);
+                originalIndices.push(index);
+            }
+        });
+    }
+
+    const totalPages = Math.ceil(displayData.length / rowsPerPage);
     if (currentPage > totalPages) currentPage = totalPages || 1;
     const startIndex = (currentPage - 1) * rowsPerPage;
-    const pageData = tableData.slice(startIndex, startIndex + rowsPerPage);
-    pageData.forEach((row, index) => tableBody.appendChild(createRow(row, startIndex + index)));
-    renderPagination();
+    const pageData = displayData.slice(startIndex, startIndex + rowsPerPage);
+
+    pageData.forEach((row, idx) => {
+        // Pass the absolute index so that updates write to the correct row in tableData
+        const actualIndex = originalIndices[startIndex + idx];
+        tableBody.appendChild(createRow(row, actualIndex));
+    });
+
+    renderPagination(displayData.length);
 }
 
-function renderPagination() {
+if (searchInput) {
+    searchInput.addEventListener('input', () => {
+        currentPage = 1;
+        savePage();
+        renderTable();
+    });
+}
+
+function renderPagination(totalItemsCount) {
     paginationContainer.innerHTML = '';
-    const totalPages = Math.ceil(tableData.length / rowsPerPage);
+    const totalPages = Math.ceil(totalItemsCount / rowsPerPage);
     if (totalPages <= 1) return;
     for (let i = 1; i <= totalPages; i++) {
         const btn = document.createElement('button');
