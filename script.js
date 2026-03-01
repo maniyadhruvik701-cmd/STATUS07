@@ -648,17 +648,22 @@ generateOrderBtn.onclick = () => {
         // Sort by order date
         const sorted = [...filtered].sort((a, b) => (a.orderDate || '').localeCompare(b.orderDate || ''));
         sorted.forEach(row => {
-            const qty = parseInt(row.totalQty) || 0;
-            if (qty > 0) {
+            const qtyStr = (row.totalQty || '').toString().trim();
+            // If the user has put any value in Total Qty (even if it's text), we show it.
+            if (qtyStr !== '' && qtyStr !== '0') {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
                     <td style="font-weight:600;">${row.orderDate}</td>
                     <td>${row.name || '-'}</td>
-                    <td style="text-align:center; font-weight:800;">${qty}</td>
+                    <td style="text-align:center; font-weight:800;">${qtyStr}</td>
                 `;
                 orderTableBody.appendChild(tr);
             }
         });
+
+        if (orderTableBody.innerHTML === '') {
+            orderTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">No quantities filled for orders in this range.</td></tr>';
+        }
     }
 
     // Grand Total Row in Footer
