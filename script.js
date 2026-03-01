@@ -136,6 +136,7 @@ const generateOrderBtn = document.getElementById('generate-order-btn');
 const orderResults = document.getElementById('order-results');
 const orderTableBody = document.getElementById('order-table-body');
 const orderTableFooter = document.getElementById('order-table-footer');
+const orderTableHead = document.getElementById('order-table-head');
 
 // Modal Elements
 const optionsModal = document.getElementById('options-modal');
@@ -547,36 +548,68 @@ generateOrderBtn.onclick = () => {
     let grandTotalPlatform = filtered.length;
 
     orderResults.classList.remove('hidden');
+    orderTableHead.innerHTML = '';
     orderTableBody.innerHTML = '';
     orderTableFooter.innerHTML = '';
 
+    // Build Header
+    const platforms = dropdownConfig.platforms || [];
+    let headerHtml = `
+        <tr>
+            <th style="color: var(--success);">Date</th>
+            <th style="color: var(--success);">Name</th>
+    `;
+    platforms.forEach(p => {
+        headerHtml += `<th style="color: var(--success); text-align: center;">${p}</th>`;
+    });
+    headerHtml += `</tr>`;
+    orderTableHead.innerHTML = headerHtml;
+
     if (filtered.length === 0) {
-        orderTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">No platform entries found in this range.</td></tr>';
+        orderTableBody.innerHTML = `<tr><td colspan="${2 + platforms.length}" style="text-align:center; padding: 20px;">No platform entries found in this range.</td></tr>`;
     } else {
+        const platformTotals = {};
+        platforms.forEach(p => platformTotals[p] = 0);
+        let grandTotalAll = 0;
 
         // Sort by Date
         const sorted = [...filtered].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
         sorted.forEach(row => {
             let pltStr = (row.platform || '').toString().trim();
-            if (!pltStr) pltStr = '-';
+
+            let colsHtml = '';
+            platforms.forEach(p => {
+                if (pltStr === p) {
+                    colsHtml += `<td style="text-align:center; font-weight:800;">1</td>`;
+                    platformTotals[p]++;
+                    grandTotalAll++;
+                } else {
+                    colsHtml += `<td style="text-align:center; color:var(--text-muted);">-</td>`; // 0 or -
+                }
+            });
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="font-weight:600;">${row.name || '-'}</td>
                 <td>${row.date}</td>
-                <td style="text-align:center; font-weight:800;">${pltStr}</td>
+                <td style="font-weight:600;">${row.name || '-'}</td>
+                ${colsHtml}
             `;
             orderTableBody.appendChild(tr);
         });
-    }
 
-    // Grand Total Row in Footer
-    const trTotal = document.createElement('tr');
-    trTotal.innerHTML = `
-        <td colspan="2" style="font-weight:700; color: var(--success); font-size: 1.1rem; text-align: right; padding-right: 20px;">TOTAL ORDERS</td>
-        <td style="text-align:center; color: var(--success); font-weight:800; font-size: 1.2rem;">${grandTotalPlatform}</td>
-    `;
-    orderTableFooter.appendChild(trTotal);
+        // Grand Total Row in Footer
+        let footerColsHtml = '';
+        platforms.forEach(p => {
+            footerColsHtml += `<td style="text-align:center; color: var(--success); font-weight:800; font-size: 1.2rem;">${platformTotals[p]}</td>`;
+        });
+
+        const trTotal = document.createElement('tr');
+        trTotal.innerHTML = `
+            <td colspan="2" style="font-weight:700; color: var(--success); font-size: 1.1rem; text-align: right; padding-right: 20px;">TOTAL ORDERS (${grandTotalAll})</td>
+            ${footerColsHtml}
+        `;
+        orderTableFooter.appendChild(trTotal);
+    }
 };
 checkRestore();
 console.log('Premium Dashboard Ready');
