@@ -98,7 +98,6 @@ const dashboardSection = document.getElementById('dashboard-section');
 const dataEntryView = document.getElementById('data-entry-view');
 const reportsView = document.getElementById('reports-view');
 const performanceView = document.getElementById('performance-view');
-const pendingReportView = document.getElementById('pending-report-view');
 const viewTitle = document.getElementById('view-title');
 const viewSubtitle = document.getElementById('view-subtitle');
 
@@ -114,7 +113,6 @@ const searchInput = document.getElementById('searchInput');
 const navDataEntry = document.getElementById('nav-data-entry');
 const navReports = document.getElementById('nav-reports');
 const navPerformance = document.getElementById('nav-performance');
-const navPending = document.getElementById('nav-pending');
 const navOrders = document.getElementById('nav-orders');
 
 // To Do Report Elements
@@ -129,13 +127,6 @@ const perfEndDate = document.getElementById('perf-end-date');
 const generatePerfBtn = document.getElementById('generate-perf-btn');
 const perfResults = document.getElementById('perf-results');
 const perfTableBody = document.getElementById('perf-table-body');
-
-// Pending Report Elements
-const pendingStartDate = document.getElementById('pending-start-date');
-const pendingEndDate = document.getElementById('pending-end-date');
-const generatePendingBtn = document.getElementById('generate-pending-btn');
-const pendingResults = document.getElementById('pending-results');
-const pendingTableBody = document.getElementById('pending-table-body');
 
 // Order Report Elements
 const orderReportView = document.getElementById('order-report-view');
@@ -159,8 +150,8 @@ let activeConfigKey = '';
 // Navigation
 function switchView(view) {
     localStorage.setItem(SAVE_KEY_VIEW, view);
-    [dataEntryView, reportsView, performanceView, pendingReportView, orderReportView].forEach(v => v.classList.add('hidden'));
-    [navDataEntry, navReports, navPerformance, navPending, navOrders].forEach(n => n?.classList.remove('active'));
+    [dataEntryView, reportsView, performanceView, orderReportView].forEach(v => v?.classList.add('hidden'));
+    [navDataEntry, navReports, navPerformance, navOrders].forEach(n => n?.classList.remove('active'));
 
     if (view === 'data-entry') {
         dataEntryView.classList.remove('hidden');
@@ -178,11 +169,6 @@ function switchView(view) {
         navPerformance.classList.add('active');
         viewTitle.textContent = 'Work Report';
         viewSubtitle.textContent = 'Summary of activities within a date range';
-    } else if (view === 'pending') {
-        pendingReportView.classList.remove('hidden');
-        navPending.classList.add('active');
-        viewTitle.textContent = 'Pending Report';
-        viewSubtitle.textContent = 'Summary of pending visits within a date range';
     } else if (view === 'orders') {
         orderReportView.classList.remove('hidden');
         navOrders.classList.add('active');
@@ -194,7 +180,6 @@ function switchView(view) {
 navDataEntry.onclick = () => switchView('data-entry');
 navReports.onclick = () => switchView('reports');
 navPerformance.onclick = () => switchView('performance');
-navPending.onclick = () => switchView('pending');
 navOrders.onclick = () => switchView('orders');
 
 signinForm.onsubmit = (e) => { e.preventDefault(); doLogin(e); };
@@ -551,80 +536,6 @@ generatePerfBtn.onclick = () => {
     perfTableBody.appendChild(trTotal);
 };
 
-const pendingTableFooter = document.getElementById('pending-table-footer');
-
-generatePendingBtn.onclick = () => {
-    const start = pendingStartDate.value;
-    const end = pendingEndDate.value;
-    if (!start || !end) return alert('Select Range');
-
-    // Changing filter to use 'date' (Entry Date) instead of 'followUp' for better tracking
-    const filtered = tableData.filter(r => (r.date >= start && r.date <= end) && r.status === 'Pending');
-
-    // Group by Date for Summary Table
-    const summary = {};
-    let grandTotal = 0;
-
-    filtered.forEach(r => {
-        const d = r.date;
-        if (!summary[d]) summary[d] = 0;
-        summary[d]++;
-        grandTotal++;
-    });
-
-    pendingResults.classList.remove('hidden');
-    pendingTableBody.innerHTML = '';
-
-    // Check if footer exists, if not create logic (but we added it to HTML)
-    // Actually we need to select it. Added const at top of block.
-    // Use the newly added pendingTableFooter
-    const footer = document.getElementById('pending-table-footer');
-    if (footer) footer.innerHTML = '';
-
-    const sortedDates = Object.keys(summary).sort();
-
-    if (sortedDates.length === 0) {
-        pendingTableBody.innerHTML = '<tr><td colspan="2" style="text-align:center; padding: 20px;">No pending entries found.</td></tr>';
-    } else {
-        sortedDates.forEach(date => {
-            const count = summary[date];
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td style="font-weight:600;">${date}</td>
-                <td style="text-align:center; color:var(--warning); font-weight:800; font-size: 1.2rem;">${count}</td>
-            `;
-            pendingTableBody.appendChild(tr);
-        });
-    }
-
-    // Grand Total Row in Footer
-    if (footer) {
-        const trTotal = document.createElement('tr');
-        trTotal.innerHTML = `
-            <td style="font-weight:700; color: var(--primary); font-size: 1.1rem; text-align: right; padding-right: 20px;">GRAND TOTAL</td>
-            <td style="text-align:center; color:var(--primary); font-weight:800; font-size: 1.2rem;">${grandTotal}</td>
-        `;
-        footer.appendChild(trTotal);
-    }
-    // Populate Details Table
-    const detailsBody = document.getElementById('pending-details-body');
-    if (detailsBody) {
-        detailsBody.innerHTML = '';
-        filtered.forEach(row => {
-            const trDetail = document.createElement('tr');
-            trDetail.innerHTML = `
-                <td>${row.date}</td>
-                <td>${row.name || '-'}</td>
-                <td>${row.company || '-'}</td>
-                <td>${row.followUp}</td>
-                <td style="color: var(--warning); font-weight: 600;">${row.status}</td>
-                <td style="font-size: 0.85rem; color: var(--text-muted);">${row.comments || '-'}</td>
-            `;
-            detailsBody.appendChild(trDetail);
-        });
-    }
-};
-
 generateOrderBtn.onclick = () => {
     const start = orderStartDate.value;
     const end = orderEndDate.value;
@@ -645,25 +556,21 @@ generateOrderBtn.onclick = () => {
     if (filtered.length === 0) {
         orderTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">No orders found in this range.</td></tr>';
     } else {
+
         // Sort by order date
         const sorted = [...filtered].sort((a, b) => (a.orderDate || '').localeCompare(b.orderDate || ''));
         sorted.forEach(row => {
-            const qtyStr = (row.totalQty || '').toString().trim();
-            // If the user has put any value in Total Qty (even if it's text), we show it.
-            if (qtyStr !== '' && qtyStr !== '0') {
-                const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td style="font-weight:600;">${row.orderDate}</td>
-                    <td>${row.name || '-'}</td>
-                    <td style="text-align:center; font-weight:800;">${qtyStr}</td>
-                `;
-                orderTableBody.appendChild(tr);
-            }
-        });
+            let qtyStr = (row.totalQty || '').toString().trim();
+            if (!qtyStr) qtyStr = '0'; // Default to 0 if blank
 
-        if (orderTableBody.innerHTML === '') {
-            orderTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">No quantities filled for orders in this range.</td></tr>';
-        }
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="font-weight:600;">${row.orderDate}</td>
+                <td>${row.name || '-'}</td>
+                <td style="text-align:center; font-weight:800;">${qtyStr === '0' ? '<span style="color:var(--text-muted)">-</span>' : qtyStr}</td>
+            `;
+            orderTableBody.appendChild(tr);
+        });
     }
 
     // Grand Total Row in Footer
