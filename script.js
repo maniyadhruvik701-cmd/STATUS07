@@ -541,33 +541,30 @@ generateOrderBtn.onclick = () => {
     const end = orderEndDate.value;
     if (!start || !end) return alert('Select Range');
 
-    // Filter by Date (Entry Date) AND only include those that have an Order Date
-    const filtered = tableData.filter(r => r.date >= start && r.date <= end && r.orderDate && r.orderDate.trim() !== '');
+    // Filter by Date (Entry Date) AND only include those that have a Platform selected
+    const filtered = tableData.filter(r => r.date >= start && r.date <= end && (r.platform || '').toString().trim() !== '');
 
-    let grandTotalQty = 0;
-    filtered.forEach(r => {
-        grandTotalQty += parseInt(r.totalQty) || 0;
-    });
+    let grandTotalPlatform = filtered.length;
 
     orderResults.classList.remove('hidden');
     orderTableBody.innerHTML = '';
     orderTableFooter.innerHTML = '';
 
     if (filtered.length === 0) {
-        orderTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">No orders found in this range.</td></tr>';
+        orderTableBody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding: 20px;">No platform entries found in this range.</td></tr>';
     } else {
 
-        // Sort by Order Date
-        const sorted = [...filtered].sort((a, b) => (a.orderDate || '').localeCompare(b.orderDate || ''));
+        // Sort by Date
+        const sorted = [...filtered].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
         sorted.forEach(row => {
-            let qtyStr = (row.totalQty || '').toString().trim();
-            if (!qtyStr) qtyStr = '0'; // Default to 0 if blank
+            let pltStr = (row.platform || '').toString().trim();
+            if (!pltStr) pltStr = '-';
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td style="font-weight:600;">${row.name || '-'}</td>
-                <td>${row.orderDate}</td>
-                <td style="text-align:center; font-weight:800;">${qtyStr === '0' ? '<span style="color:var(--text-muted)">-</span>' : qtyStr}</td>
+                <td>${row.date}</td>
+                <td style="text-align:center; font-weight:800;">${pltStr}</td>
             `;
             orderTableBody.appendChild(tr);
         });
@@ -576,8 +573,8 @@ generateOrderBtn.onclick = () => {
     // Grand Total Row in Footer
     const trTotal = document.createElement('tr');
     trTotal.innerHTML = `
-        <td colspan="2" style="font-weight:700; color: var(--success); font-size: 1.1rem; text-align: right; padding-right: 20px;">GRAND TOTAL</td>
-        <td style="text-align:center; color: var(--success); font-weight:800; font-size: 1.2rem;">${grandTotalQty}</td>
+        <td colspan="2" style="font-weight:700; color: var(--success); font-size: 1.1rem; text-align: right; padding-right: 20px;">TOTAL ORDERS</td>
+        <td style="text-align:center; color: var(--success); font-weight:800; font-size: 1.2rem;">${grandTotalPlatform}</td>
     `;
     orderTableFooter.appendChild(trTotal);
 };
