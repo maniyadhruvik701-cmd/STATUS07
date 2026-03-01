@@ -379,6 +379,23 @@ select.cell-input option {
     background: rgba(255, 255, 255, 0.1);
 }
 
+.btn-danger {
+    padding: 8px 16px;
+    background: var(--danger);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px -5px var(--danger);
+}
+
 /* Modal Styling */
 .modal-overlay {
     position: fixed;
