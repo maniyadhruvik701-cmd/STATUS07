@@ -299,6 +299,8 @@ function createRow(data, actualIndex) {
         { key: 'name', type: 'text' },
         { key: 'mobile', type: 'tel' },
         { key: 'company', type: 'text' },
+        { key: 'city', type: 'text' },
+        { key: 'state', type: 'text' },
         { key: 'platform', type: 'select', configKey: 'platforms', label: 'Platform' },
         { key: 'type', type: 'select', configKey: 'types', label: 'Type' },
         { key: 'status', type: 'select', configKey: 'statuses', label: 'Status' },
@@ -372,7 +374,7 @@ addRowBtn.onclick = () => {
     const today = new Date().toISOString().split('T')[0]; // e.g. 2026-02-25
     for (let i = 0; i < 50; i++) {
         tableData.push({
-            date: today, name: '', mobile: '', company: '', platform: '',
+            date: today, name: '', mobile: '', company: '', city: '', state: '', platform: '',
             type: '', status: '',
             orderDate: '', totalQty: '', followUp: '', comments: ''
         });
@@ -403,9 +405,9 @@ const exportBtn = document.getElementById('exportBtn');
 if (exportBtn) {
     exportBtn.onclick = () => {
         if (tableData.length === 0) return alert('No data to export');
-        const headers = ["Date", "Name", "Mobile No", "Company", "Platform", "Type", "Status", "Order Date", "Total Qty", "Follow-up", "Comments"];
+        const headers = ["Date", "Name", "Mobile No", "Company", "City", "State", "Platform", "Type", "Status", "Order Date", "Total Qty", "Follow-up", "Comments"];
         const rows = tableData.map(r => [
-            r.date, r.name, r.mobile, r.company, r.platform, r.type, r.status, r.orderDate, r.totalQty, r.followUp, r.comments
+            r.date, r.name, r.mobile, r.company, r.city || '', r.state || '', r.platform, r.type, r.status, r.orderDate, r.totalQty, r.followUp, r.comments
         ]);
         let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
         const encodedUri = encodeURI(csvContent);
@@ -426,23 +428,40 @@ generateReportBtn.onclick = () => {
     reportResults.classList.remove('hidden');
     summaryTableBody.innerHTML = '';
 
-    // બધા status ની count બતાવો
+    // name વાઇઝ અને status વાઇઝ કાઉન્ટિંગ (માત્ર To Do table માટે)
     let grandTotal = 0;
-    dropdownConfig.statuses.forEach(s => {
-        const count = filtered.filter(r => r.status === s).length;
-        if (count > 0) {
-            grandTotal += count;
-            const tr = document.createElement('tr');
-            const color = s === 'Pending' ? 'var(--warning)' : 'var(--success)';
-            tr.innerHTML = `<td style="font-weight:600;">${s}</td><td style="text-align:center; color:${color}; font-weight:800;">${count} To Do</td>`;
-            summaryTableBody.appendChild(tr);
-        }
+
+    // પહેલા ડેટા ને Name થી ગ્રુપ કરો.
+    const nameGroups = {};
+    filtered.forEach(r => {
+        const n = r.name || '-';
+        if (!nameGroups[n]) nameGroups[n] = [];
+        nameGroups[n].push(r);
+    });
+
+    Object.keys(nameGroups).sort().forEach(n => {
+        const groupData = nameGroups[n];
+
+        dropdownConfig.statuses.forEach(s => {
+            const count = groupData.filter(r => r.status === s).length;
+            if (count > 0) {
+                grandTotal += count;
+                const tr = document.createElement('tr');
+                const color = s === 'Pending' ? 'var(--warning)' : 'var(--success)';
+                tr.innerHTML = `
+                    <td style="font-weight:600;">${n}</td>
+                    <td style="font-weight:600;">${s}</td>
+                    <td style="text-align:center; color:${color}; font-weight:800;">${count} To Do</td>
+                `;
+                summaryTableBody.appendChild(tr);
+            }
+        });
     });
 
     // Grand Total Row
     const trTotal = document.createElement('tr');
     trTotal.style.background = 'rgba(255, 255, 255, 0.05)';
-    trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
+    trTotal.innerHTML = `<td colspan="2" style="font-weight:700; color: var(--primary); text-align: right; padding-right: 20px;">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
     summaryTableBody.appendChild(trTotal);
 
     // Show Pending Entries Detail
@@ -462,6 +481,8 @@ generateReportBtn.onclick = () => {
                     <td>${row.name || '-'}</td>
                     <td>${row.mobile || '-'}</td>
                     <td>${row.company || '-'}</td>
+                    <td>${row.city || '-'}</td>
+                    <td>${row.state || '-'}</td>
                     <td>${row.followUp || '-'}</td>
                     <td style="color: var(--warning); font-weight: 600;">${row.status}</td>
                     <td style="font-size: 0.85rem; color: var(--text-muted);">${row.comments || '-'}</td>
