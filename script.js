@@ -56,20 +56,35 @@ function fixDates(data) {
 }
 
 // Listen for Data Changes - This makes it real-time across devices!
-const dataRef = db.ref('status_data');
-dataRef.on('value', (snapshot) => {
+let dataRef = db.ref('status_data');
+let mainData = [];
+let repeatData = [];
+let currentView = localStorage.getItem(SAVE_KEY_VIEW) || 'data-entry';
+
+db.ref('status_data').on('value', (snapshot) => {
     const data = snapshot.val();
-    if (data) {
-        // Firebase returns objects for lists sometimes, ensure it's an array
-        tableData = Array.isArray(data) ? data : Object.values(data);
-        // Auto-fix wrong year dates
-        if (fixDates(tableData)) {
-            saveData(); // Save corrected dates back to Firebase
-        }
-    } else {
-        tableData = [];
+    mainData = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+    if (fixDates(mainData)) {
+        db.ref('status_data').set(mainData);
     }
-    renderTable(); // Re-render whenever cloud data updates
+    if (currentView !== 'repeat-entry') {
+        tableData = mainData;
+        dataRef = db.ref('status_data');
+        renderTable();
+    }
+});
+
+db.ref('repeat_status_data').on('value', (snapshot) => {
+    const data = snapshot.val();
+    repeatData = data ? (Array.isArray(data) ? data : Object.values(data)) : [];
+    if (fixDates(repeatData)) {
+        db.ref('repeat_status_data').set(repeatData);
+    }
+    if (currentView === 'repeat-entry') {
+        tableData = repeatData;
+        dataRef = db.ref('repeat_status_data');
+        renderTable();
+    }
 });
 
 function saveData() {
@@ -111,6 +126,8 @@ const navDataEntry = document.getElementById('nav-data-entry');
 const navReports = document.getElementById('nav-reports');
 const navPerformance = document.getElementById('nav-performance');
 const navOrders = document.getElementById('nav-orders');
+const navRepeatEntry = document.getElementById('nav-repeat-entry');
+const navRepeatOrders = document.getElementById('nav-repeat-orders');
 
 // To Do Report Elements
 const reportStartDate = document.getElementById('report-start-date');
@@ -135,6 +152,16 @@ const orderTableBody = document.getElementById('order-table-body');
 const orderTableFooter = document.getElementById('order-table-footer');
 const orderTableHead = document.getElementById('order-table-head');
 
+// Repeat Order Report Elements
+const repeatOrderReportView = document.getElementById('repeat-order-report-view');
+const repeatOrderStartDate = document.getElementById('repeat-order-start-date');
+const repeatOrderEndDate = document.getElementById('repeat-order-end-date');
+const generateRepeatOrderBtn = document.getElementById('generate-repeat-order-btn');
+const repeatOrderResults = document.getElementById('repeat-order-results');
+const repeatOrderTableBody = document.getElementById('repeat-order-table-body');
+const repeatOrderTableFooter = document.getElementById('repeat-order-table-footer');
+const repeatOrderTableHead = document.getElementById('repeat-order-table-head');
+
 // Modal Elements
 const optionsModal = document.getElementById('options-modal');
 const modalTitle = document.getElementById('modal-title');
@@ -147,31 +174,55 @@ let activeConfigKey = '';
 
 // Navigation
 function switchView(view) {
+    currentView = view;
     localStorage.setItem(SAVE_KEY_VIEW, view);
-    [dataEntryView, reportsView, performanceView, orderReportView].forEach(v => v?.classList.add('hidden'));
-    [navDataEntry, navReports, navPerformance, navOrders].forEach(n => n?.classList.remove('active'));
+    [dataEntryView, reportsView, performanceView, orderReportView, repeatOrderReportView].forEach(v => v?.classList.add('hidden'));
+    [navDataEntry, navReports, navPerformance, navOrders, navRepeatEntry, navRepeatOrders].forEach(n => n?.classList.remove('active'));
 
     if (view === 'data-entry') {
+        tableData = mainData;
+        dataRef = db.ref('status_data');
         dataEntryView.classList.remove('hidden');
         navDataEntry.classList.add('active');
         viewTitle.textContent = 'Data Entry';
         viewSubtitle.textContent = 'Manage and input your records';
         renderTable();
+    } else if (view === 'repeat-entry') {
+        tableData = repeatData;
+        dataRef = db.ref('repeat_status_data');
+        dataEntryView.classList.remove('hidden');
+        if (navRepeatEntry) navRepeatEntry.classList.add('active');
+        viewTitle.textContent = 'Repeat Entry';
+        viewSubtitle.textContent = 'Manage your repeat entries';
+        renderTable();
     } else if (view === 'reports') {
+        tableData = mainData;
+        dataRef = db.ref('status_data');
         reportsView.classList.remove('hidden');
         navReports.classList.add('active');
         viewTitle.textContent = 'To Do List';
         viewSubtitle.textContent = 'Check your tasks by follow-up date';
     } else if (view === 'performance') {
+        tableData = mainData;
+        dataRef = db.ref('status_data');
         performanceView.classList.remove('hidden');
         navPerformance.classList.add('active');
         viewTitle.textContent = 'Work Report';
         viewSubtitle.textContent = 'Summary of activities within a date range';
     } else if (view === 'orders') {
+        tableData = mainData;
+        dataRef = db.ref('status_data');
         orderReportView.classList.remove('hidden');
         navOrders.classList.add('active');
         viewTitle.textContent = 'Total Order Report';
         viewSubtitle.textContent = 'Summary of orders by date';
+    } else if (view === 'repeat-orders') {
+        tableData = repeatData;
+        dataRef = db.ref('repeat_status_data');
+        repeatOrderReportView.classList.remove('hidden');
+        if (navRepeatOrders) navRepeatOrders.classList.add('active');
+        viewTitle.textContent = 'Repeat Order Report';
+        viewSubtitle.textContent = 'Summary of repeat orders by date';
     }
 }
 
@@ -179,6 +230,8 @@ navDataEntry.onclick = () => switchView('data-entry');
 navReports.onclick = () => switchView('reports');
 navPerformance.onclick = () => switchView('performance');
 navOrders.onclick = () => switchView('orders');
+if (navRepeatEntry) navRepeatEntry.onclick = () => switchView('repeat-entry');
+if (navRepeatOrders) navRepeatOrders.onclick = () => switchView('repeat-orders');
 
 signinForm.onsubmit = (e) => { e.preventDefault(); doLogin(e); };
 signupForm.onsubmit = (e) => { e.preventDefault(); doLogin(e); };
@@ -681,6 +734,101 @@ generateOrderBtn.onclick = () => {
         orderTableFooter.appendChild(trTotal);
     }
 };
+
+if (generateRepeatOrderBtn) {
+    generateRepeatOrderBtn.onclick = () => {
+        const start = repeatOrderStartDate.value;
+        const end = repeatOrderEndDate.value;
+        if (!start || !end) return alert('Select Range');
+
+        // Filter by Order Date AND only include those that have orderDate, totalQty and Platform selected
+        const filtered = repeatData.filter(r => 
+            (r.orderDate || '') >= start && 
+            (r.orderDate || '') <= end && 
+            (r.orderDate || '').trim() !== '' && 
+            (r.totalQty || '').toString().trim() !== '' && 
+            (r.platform || '').toString().trim() !== ''
+        );
+
+        let grandTotalPlatform = filtered.length;
+
+        repeatOrderResults.classList.remove('hidden');
+        repeatOrderTableHead.innerHTML = '';
+        repeatOrderTableBody.innerHTML = '';
+        repeatOrderTableFooter.innerHTML = '';
+
+        // Build Header
+        const platforms = dropdownConfig.platforms || [];
+        let headerHtml = `
+            <tr>
+                <th style="color: var(--success);">Order Date</th>
+                <th style="color: var(--success);">Name</th>
+        `;
+        platforms.forEach(p => {
+            headerHtml += `<th style="color: var(--success); text-align: center;">${p}</th>`;
+        });
+        headerHtml += `</tr>`;
+        repeatOrderTableHead.innerHTML = headerHtml;
+
+        if (filtered.length === 0) {
+            repeatOrderTableBody.innerHTML = `<tr><td colspan="${2 + platforms.length}" style="text-align:center; padding: 20px;">No repeat platform entries found in this range.</td></tr>`;
+        } else {
+            const platformTotals = {};
+            platforms.forEach(p => platformTotals[p] = 0);
+            let grandTotalAll = 0;
+
+            // Sort by Order Date
+            const sorted = [...filtered].sort((a, b) => (a.orderDate || '').localeCompare(b.orderDate || ''));
+            sorted.forEach(row => {
+                let pltStr = (row.platform || '').toString().trim();
+
+                let colsHtml = '';
+                platforms.forEach(p => {
+                    if (pltStr === p) {
+                        colsHtml += `<td style="text-align:center; font-weight:800;">1</td>`;
+                        platformTotals[p]++;
+                        grandTotalAll++;
+                    } else {
+                        colsHtml += `<td style="text-align:center; color:var(--text-muted);">-</td>`; // 0 or -
+                    }
+                });
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.orderDate}</td>
+                    <td style="font-weight:600;">${row.name || '-'}</td>
+                    ${colsHtml}
+                `;
+                tr.style.cursor = 'pointer';
+                tr.onclick = () => {
+                    if (searchInput) searchInput.value = 'report:order:' + (row.orderDate || '');
+                    switchView('repeat-entry');
+                    renderTable();
+                };
+                repeatOrderTableBody.appendChild(tr);
+            });
+
+            // Grand Total Row in Footer
+            let footerColsHtml = '';
+            platforms.forEach(p => {
+                footerColsHtml += `<td style="text-align:center; color: var(--success); font-weight:800; font-size: 1.2rem;">${platformTotals[p]}</td>`;
+            });
+
+            const trTotal = document.createElement('tr');
+            trTotal.innerHTML = `
+                <td colspan="2" style="font-weight:700; color: var(--success); font-size: 1.1rem; text-align: right; padding-right: 20px;">TOTAL ORDERS (${grandTotalAll})</td>
+                ${footerColsHtml}
+            `;
+            trTotal.style.cursor = 'pointer';
+            trTotal.onclick = () => {
+                if (searchInput) searchInput.value = 'report:order:' + start + ':' + end;
+                switchView('repeat-entry');
+                renderTable();
+            };
+            repeatOrderTableFooter.appendChild(trTotal);
+        }
+    };
+}
 
 function checkRestore() {
     const isLoggedIn = localStorage.getItem(SAVE_KEY_AUTH) === 'true';
