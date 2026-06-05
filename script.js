@@ -1,7 +1,4 @@
 // Firebase Configuration
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
 const firebaseConfig = {
     apiKey: "AIzaSyAz4e7tEJdisgTSAY5pGzx7P60fmR2kI4U",
     authDomain: "statusdashboard-d30db.firebaseapp.com",
@@ -13,9 +10,9 @@ const firebaseConfig = {
     measurementId: "G-23TBXXLHTX"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
+// Initialize Firebase using compat API
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 
 // Storage Management (Still use LocalStorage for auth/view state, but Data is now Firebase)
 const SAVE_KEY_PAGE = 'status_current_page';
@@ -59,8 +56,8 @@ function fixDates(data) {
 }
 
 // Listen for Data Changes - This makes it real-time across devices!
-const dataRef = ref(db, 'status_data');
-onValue(dataRef, (snapshot) => {
+const dataRef = db.ref('status_data');
+dataRef.on('value', (snapshot) => {
     const data = snapshot.val();
     if (data) {
         // Firebase returns objects for lists sometimes, ensure it's an array
@@ -78,7 +75,7 @@ onValue(dataRef, (snapshot) => {
 function saveData() {
     // Save to Firebase Cloud
     // We use set() to overwrite the list with the new state
-    set(dataRef, tableData).catch((error) => {
+    dataRef.set(tableData).catch((error) => {
         console.error("Error saving data: ", error);
         alert('Data could not be saved to the cloud. Please check your connection.');
     });
@@ -337,19 +334,46 @@ function renderTable() {
     const query = (searchInput ? searchInput.value.toLowerCase() : '');
 
     // Filter logic
-    let displayData = tableData;
-    let originalIndices = tableData.map((_, i) => i);
+    let displayData = [...tableData].reverse();
+    let originalIndices = tableData.map((_, i) => i).reverse();
 
     if (query) {
         displayData = [];
         originalIndices = [];
-        tableData.forEach((row, index) => {
-            const searchableText = `${row.name || ''} ${row.mobile || ''} ${row.company || ''} ${row.city || ''} ${row.state || ''} ${row.date || ''}`.toLowerCase();
-            if (searchableText.includes(query)) {
-                displayData.push(row);
-                originalIndices.push(index);
+        const isReport = query.startsWith('report:');
+        let repType = '', rStart = '', rEnd = '';
+        if (isReport) {
+            const parts = query.split(':');
+            repType = parts[1];
+            rStart = parts[2];
+            rEnd = parts[3] || parts[2];
+        }
+
+        for (let i = tableData.length - 1; i >= 0; i--) {
+            const row = tableData[i];
+            let matches = false;
+            if (isReport) {
+                if (repType === 'todo') {
+                    matches = (row.followUp === rStart);
+                } else if (repType === 'perf') {
+                    matches = (row.date >= rStart && row.date <= rEnd);
+                } else if (repType === 'order') {
+                    matches = ((row.orderDate || '') >= rStart && 
+                               (row.orderDate || '') <= rEnd && 
+                               (row.orderDate || '').trim() !== '' && 
+                               (row.totalQty || '').toString().trim() !== '' && 
+                               (row.platform || '').toString().trim() !== '');
+                }
+            } else {
+                const searchableText = `${row.name || ''} ${row.mobile || ''} ${row.company || ''} ${row.city || ''} ${row.state || ''} ${row.date || ''} ${row.status || ''} ${row.platform || ''} ${row.type || ''}`.toLowerCase();
+                matches = searchableText.includes(query);
             }
-        });
+
+            if (matches) {
+                displayData.push(row);
+                originalIndices.push(i);
+            }
+        }
     }
 
     const totalPages = Math.ceil(displayData.length / rowsPerPage);
@@ -389,7 +413,7 @@ function renderPagination(totalItemsCount) {
 
 addRowBtn.onclick = () => {
     // Add new entries to the BOTTOM (push)
-    // This ensures existing entries at the top (index 0, 1, etc.) STAY at the top.
+    // Since the table is rendered in reverse order, these will appear at the TOP on Page 1.
     const today = new Date().toISOString().split('T')[0]; // e.g. 2026-02-25
     for (let i = 0; i < 50; i++) {
         tableData.push({
@@ -398,11 +422,8 @@ addRowBtn.onclick = () => {
             orderDate: '', totalQty: '', followUp: '', comments: ''
         });
     }
-    // We stay on the current page so the user doesn't lose context, 
-    // or we can go to the last page. 
-    // Let's go to the last page to show the new blank rows as requested previously.
-    currentPage = Math.ceil(tableData.length / rowsPerPage);
-    if (currentPage < 1) currentPage = 1;
+    // Go to the first page to show the new blank rows at the top
+    currentPage = 1;
 
     saveData(); savePage(); renderTable();
 };
@@ -472,6 +493,12 @@ generateReportBtn.onclick = () => {
                     <td style="font-weight:600;">${s}</td>
                     <td style="text-align:center; color:${color}; font-weight:800;">${count} To Do</td>
                 `;
+                tr.style.cursor = 'pointer';
+                tr.onclick = () => {
+                    if (searchInput) searchInput.value = n !== '-' ? n : '';
+                    switchView('data-entry');
+                    renderTable();
+                };
                 summaryTableBody.appendChild(tr);
             }
         });
@@ -481,6 +508,13 @@ generateReportBtn.onclick = () => {
     const trTotal = document.createElement('tr');
     trTotal.style.background = 'rgba(255, 255, 255, 0.05)';
     trTotal.innerHTML = `<td colspan="2" style="font-weight:700; color: var(--primary); text-align: right; padding-right: 20px;">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
+    trTotal.style.cursor = 'pointer';
+    trTotal.onclick = () => {
+        const d = reportStartDate.value;
+        if (searchInput) searchInput.value = 'report:todo:' + d;
+        switchView('data-entry');
+        renderTable();
+    };
     summaryTableBody.appendChild(trTotal);
 
     // Show Pending Entries Detail
@@ -506,6 +540,12 @@ generateReportBtn.onclick = () => {
                     <td style="color: var(--warning); font-weight: 600;">${row.status}</td>
                     <td style="font-size: 0.85rem; color: var(--text-muted);">${row.comments || '-'}</td>
                 `;
+                tr.style.cursor = 'pointer';
+                tr.onclick = () => {
+                    if (searchInput) searchInput.value = row.name || row.mobile || row.date || '';
+                    switchView('data-entry');
+                    renderTable();
+                };
                 todoPendingBody.appendChild(tr);
             });
         }
@@ -527,6 +567,12 @@ generatePerfBtn.onclick = () => {
             grandTotal += count;
             const tr = document.createElement('tr');
             tr.innerHTML = `<td style="font-weight:600;">${s}</td><td style="text-align:center; color:var(--secondary); font-weight:800;">${count}</td>`;
+            tr.style.cursor = 'pointer';
+            tr.onclick = () => {
+                if (searchInput) searchInput.value = s;
+                switchView('data-entry');
+                renderTable();
+            };
             perfTableBody.appendChild(tr);
         }
     });
@@ -534,6 +580,12 @@ generatePerfBtn.onclick = () => {
     // Grand Total Row
     const trTotal = document.createElement('tr');
     trTotal.innerHTML = `<td style="font-weight:700; color: var(--primary);">GRAND TOTAL</td><td style="text-align:center; color:var(--primary); font-weight:800;">${grandTotal}</td>`;
+    trTotal.style.cursor = 'pointer';
+    trTotal.onclick = () => {
+        if (searchInput) searchInput.value = 'report:perf:' + start + ':' + end;
+        switchView('data-entry');
+        renderTable();
+    };
     perfTableBody.appendChild(trTotal);
 };
 
@@ -542,8 +594,14 @@ generateOrderBtn.onclick = () => {
     const end = orderEndDate.value;
     if (!start || !end) return alert('Select Range');
 
-    // Filter by Date (Entry Date) AND only include those that have a Platform selected
-    const filtered = tableData.filter(r => r.date >= start && r.date <= end && (r.platform || '').toString().trim() !== '');
+    // Filter by Order Date AND only include those that have orderDate, totalQty and Platform selected
+    const filtered = tableData.filter(r => 
+        (r.orderDate || '') >= start && 
+        (r.orderDate || '') <= end && 
+        (r.orderDate || '').trim() !== '' && 
+        (r.totalQty || '').toString().trim() !== '' && 
+        (r.platform || '').toString().trim() !== ''
+    );
 
     let grandTotalPlatform = filtered.length;
 
@@ -556,7 +614,7 @@ generateOrderBtn.onclick = () => {
     const platforms = dropdownConfig.platforms || [];
     let headerHtml = `
         <tr>
-            <th style="color: var(--success);">Date</th>
+            <th style="color: var(--success);">Order Date</th>
             <th style="color: var(--success);">Name</th>
     `;
     platforms.forEach(p => {
@@ -572,8 +630,8 @@ generateOrderBtn.onclick = () => {
         platforms.forEach(p => platformTotals[p] = 0);
         let grandTotalAll = 0;
 
-        // Sort by Date
-        const sorted = [...filtered].sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+        // Sort by Order Date
+        const sorted = [...filtered].sort((a, b) => (a.orderDate || '').localeCompare(b.orderDate || ''));
         sorted.forEach(row => {
             let pltStr = (row.platform || '').toString().trim();
 
@@ -590,10 +648,16 @@ generateOrderBtn.onclick = () => {
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${row.date}</td>
+                <td>${row.orderDate}</td>
                 <td style="font-weight:600;">${row.name || '-'}</td>
                 ${colsHtml}
             `;
+            tr.style.cursor = 'pointer';
+            tr.onclick = () => {
+                if (searchInput) searchInput.value = row.name || row.mobile || row.orderDate || '';
+                switchView('data-entry');
+                renderTable();
+            };
             orderTableBody.appendChild(tr);
         });
 
@@ -608,8 +672,28 @@ generateOrderBtn.onclick = () => {
             <td colspan="2" style="font-weight:700; color: var(--success); font-size: 1.1rem; text-align: right; padding-right: 20px;">TOTAL ORDERS (${grandTotalAll})</td>
             ${footerColsHtml}
         `;
+        trTotal.style.cursor = 'pointer';
+        trTotal.onclick = () => {
+            if (searchInput) searchInput.value = 'report:order:' + start + ':' + end;
+            switchView('data-entry');
+            renderTable();
+        };
         orderTableFooter.appendChild(trTotal);
     }
 };
+
+function checkRestore() {
+    const isLoggedIn = localStorage.getItem(SAVE_KEY_AUTH) === 'true';
+    if (isLoggedIn) {
+        authSection.classList.add('hidden');
+        dashboardSection.classList.remove('hidden');
+        const savedView = localStorage.getItem(SAVE_KEY_VIEW) || 'data-entry';
+        switchView(savedView);
+    } else {
+        authSection.classList.remove('hidden');
+        dashboardSection.classList.add('hidden');
+    }
+}
+
 checkRestore();
 console.log('Premium Dashboard Ready');
