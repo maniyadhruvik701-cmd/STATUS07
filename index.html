@@ -81,6 +81,14 @@
             <i class="fas fa-shopping-cart"></i>
             <span>Total Order</span>
           </div>
+          <div class="nav-item" id="nav-repeat-entry">
+            <i class="fas fa-redo"></i>
+            <span>Repeat Entry</span>
+          </div>
+          <div class="nav-item" id="nav-repeat-orders">
+            <i class="fas fa-shopping-basket"></i>
+            <span>Repeat Order Report</span>
+          </div>
           <div class="nav-item">
             <i class="fas fa-chart-line"></i>
             <span>Analytics</span>
@@ -264,6 +272,33 @@
             </div>
           </div>
         </section>
+
+        <!-- Repeat Order View -->
+        <section id="repeat-order-report-view" class="data-entry-container hidden">
+          <div class="action-bar glass-panel" style="padding: 20px; display: flex; gap: 20px; align-items: flex-end;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>Start Date</label>
+              <input type="date" id="repeat-order-start-date" class="input-field" style="width: 200px;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>End Date</label>
+              <input type="date" id="repeat-order-end-date" class="input-field" style="width: 200px;">
+            </div>
+            <button class="btn-primary" id="generate-repeat-order-btn" style="width: auto; margin-top: 0;">
+              <i class="fas fa-search-dollar"></i> Generate Report
+            </button>
+          </div>
+          <div id="repeat-order-results" class="hidden">
+            <div class="glass-panel" style="margin-top: 30px; padding: 20px;">
+              <table style="min-width: auto; width: 100%;">
+                <thead id="repeat-order-table-head">
+                </thead>
+                <tbody id="repeat-order-table-body"></tbody>
+                <tfoot id="repeat-order-table-footer" style="border-top: 2px solid var(--border);"></tfoot>
+              </table>
+            </div>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -284,7 +319,7 @@
   </div>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-  <script src="script.js?v=10"></script>
+  <script src="script.js?v=12"></script>
 </body>
 
 </html>
