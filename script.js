@@ -42,7 +42,7 @@ let tableData = []; // Will be loaded from Firebase
 
 // Fix dates with wrong year (0026 -> 2026)
 function fixDates(data) {
-    const dateFields = ['date', 'orderDate', 'followUp'];
+    const dateFields = ['date', 'orderDate', 'orderDate2', 'orderDate3', 'orderDate4', 'orderDate5', 'followUp'];
     let changed = false;
     data.forEach(row => {
         dateFields.forEach(field => {
@@ -178,6 +178,13 @@ function switchView(view) {
     localStorage.setItem(SAVE_KEY_VIEW, view);
     [dataEntryView, reportsView, performanceView, orderReportView, repeatOrderReportView].forEach(v => v?.classList.add('hidden'));
     [navDataEntry, navReports, navPerformance, navOrders, navRepeatEntry, navRepeatOrders].forEach(n => n?.classList.remove('active'));
+
+    const repeatCols = document.querySelectorAll('.repeat-col');
+    if (view === 'repeat-entry') {
+        repeatCols.forEach(col => col.classList.remove('hidden'));
+    } else {
+        repeatCols.forEach(col => col.classList.add('hidden'));
+    }
 
     if (view === 'data-entry') {
         tableData = mainData;
@@ -342,11 +349,16 @@ function createRow(data, actualIndex) {
         { key: 'type', type: 'select', configKey: 'types', label: 'Type' },
         { key: 'status', type: 'select', configKey: 'statuses', label: 'Status' },
         { key: 'orderDate', type: 'date' },
+        { key: 'orderDate2', type: 'date', repeatOnly: true },
+        { key: 'orderDate3', type: 'date', repeatOnly: true },
+        { key: 'orderDate4', type: 'date', repeatOnly: true },
+        { key: 'orderDate5', type: 'date', repeatOnly: true },
         { key: 'totalQty', type: 'number' },
         { key: 'followUp', type: 'date' },
         { key: 'comments', type: 'text' }
     ];
     fields.forEach(f => {
+        if (f.repeatOnly && currentView !== 'repeat-entry') return;
         const td = document.createElement('td');
         if (f.type === 'select') {
             const select = document.createElement('select');
@@ -369,6 +381,28 @@ function createRow(data, actualIndex) {
             });
             select.onchange = (e) => { tableData[actualIndex][f.key] = e.target.value; saveData(); };
             td.appendChild(select);
+        } else if (f.type === 'text') {
+            const textarea = document.createElement('textarea');
+            textarea.className = 'cell-input';
+            textarea.value = data[f.key] || '';
+            textarea.rows = 1;
+            textarea.style.resize = 'none';
+            textarea.style.overflow = 'hidden';
+            textarea.style.minHeight = '28px';
+            textarea.style.lineHeight = '1.5';
+            
+            const autoExpand = function() {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            };
+            
+            textarea.addEventListener('input', autoExpand);
+            textarea.onchange = (e) => { tableData[actualIndex][f.key] = e.target.value; saveData(); };
+            
+            td.appendChild(textarea);
+            
+            // Trigger expand on load
+            setTimeout(() => autoExpand.call(textarea), 0);
         } else {
             const input = document.createElement('input');
             input.type = f.type;
