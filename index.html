@@ -160,6 +160,7 @@
                   <th>Total Qty</th>
                   <th>Follow up Date</th>
                   <th>Comments</th>
+                  <th>Lead Type <i class="fas fa-cog edit-config" data-config="leadTypes"></i></th>
                 </tr>
               </thead>
               <tbody id="table-body"></tbody>
@@ -315,6 +316,12 @@
               <label>End Date</label>
               <input type="date" id="analytics-end-date" class="input-field" style="width: 200px;">
             </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>Lead Type</label>
+              <select id="analytics-lead-type" class="input-field" style="width: 150px;">
+                <option value="ALL">All</option>
+              </select>
+            </div>
             <button class="btn-primary" id="generate-analytics-btn" style="width: auto; margin-top: 0;">
               <i class="fas fa-chart-bar"></i> Generate Analytics
             </button>
@@ -350,7 +357,7 @@
   </div>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-  <script src="script.js?v=17"></script>
+  <script src="script.js?v=18"></script>
 </body>
 
 </html>
