@@ -28,7 +28,8 @@ const rowsPerPage = 20;
 const defaultConfig = {
     platforms: ['Indiamart', 'Google', 'Personal', 'Paid'],
     types: ['Reseller', 'Wholeseller', 'Online Brand'],
-    statuses: ['Visit Done', 'Visit', 'Pending', 'Call Done']
+    statuses: ['Visit Done', 'Visit', 'Pending', 'Call Done'],
+    leadTypes: ['Hot', 'Warm', 'Cold']
 };
 
 let dropdownConfig = JSON.parse(localStorage.getItem(SAVE_KEY_CONFIG)) || defaultConfig;
@@ -134,6 +135,7 @@ const navAnalytics = document.getElementById('nav-analytics');
 const analyticsView = document.getElementById('analytics-view');
 const analyticsStartDate = document.getElementById('analytics-start-date');
 const analyticsEndDate = document.getElementById('analytics-end-date');
+const analyticsLeadType = document.getElementById('analytics-lead-type');
 const generateAnalyticsBtn = document.getElementById('generate-analytics-btn');
 const analyticsResults = document.getElementById('analytics-results');
 const analyticsTableHead = document.getElementById('analytics-table-head');
@@ -248,6 +250,18 @@ function switchView(view) {
         if (navAnalytics) navAnalytics.classList.add('active');
         viewTitle.textContent = 'Analytics';
         viewSubtitle.textContent = 'Platform-wise Work Report';
+
+        if (analyticsLeadType) {
+            const currVal = analyticsLeadType.value;
+            analyticsLeadType.innerHTML = '<option value="ALL">All</option>';
+            (dropdownConfig.leadTypes || []).forEach(lt => {
+                const opt = document.createElement('option');
+                opt.value = lt;
+                opt.textContent = lt;
+                analyticsLeadType.appendChild(opt);
+            });
+            analyticsLeadType.value = currVal || 'ALL';
+        }
     }
 }
 
@@ -374,7 +388,8 @@ function createRow(data, actualIndex) {
         { key: 'orderDate5', type: 'date', repeatOnly: true },
         { key: 'totalQty', type: 'number' },
         { key: 'followUp', type: 'date' },
-        { key: 'comments', type: 'text' }
+        { key: 'comments', type: 'text' },
+        { key: 'leadType', type: 'select', configKey: 'leadTypes', label: 'Lead Type' }
     ];
     fields.forEach(f => {
         if (f.repeatOnly && currentView !== 'repeat-entry') return;
@@ -447,7 +462,7 @@ function renderTable() {
         displayData = [];
         originalIndices = [];
         const isReport = query.startsWith('report:');
-        let repType = '', rStart = '', rEnd = '', rPlatform = '', rStatus = '';
+        let repType = '', rStart = '', rEnd = '', rPlatform = '', rStatus = '', rLeadType = '';
         if (isReport) {
             const parts = query.split(':');
             repType = parts[1];
@@ -455,6 +470,7 @@ function renderTable() {
             rEnd = parts[3] || parts[2];
             rPlatform = parts[4] || '';
             rStatus = parts[5] || '';
+            rLeadType = parts[6] || '';
         }
 
         for (let i = tableData.length - 1; i >= 0; i--) {
@@ -479,9 +495,12 @@ function renderTable() {
                     if (rStatus && rStatus !== 'all') {
                         matches = matches && ((row.status || '').toLowerCase() === rStatus);
                     }
+                    if (rLeadType && rLeadType !== 'all') {
+                        matches = matches && ((row.leadType || '').toLowerCase() === rLeadType);
+                    }
                 }
             } else {
-                const searchableText = `${row.name || ''} ${row.mobile || ''} ${row.company || ''} ${row.city || ''} ${row.state || ''} ${row.date || ''} ${row.status || ''} ${row.platform || ''} ${row.type || ''}`.toLowerCase();
+                const searchableText = `${row.name || ''} ${row.mobile || ''} ${row.company || ''} ${row.city || ''} ${row.state || ''} ${row.date || ''} ${row.status || ''} ${row.platform || ''} ${row.type || ''} ${row.leadType || ''}`.toLowerCase();
                 matches = searchableText.includes(query);
             }
 
@@ -535,7 +554,7 @@ addRowBtn.onclick = () => {
         tableData.push({
             date: today, name: '', mobile: '', company: '', city: '', state: '', platform: '',
             type: '', status: '',
-            orderDate: '', totalQty: '', followUp: '', comments: ''
+            orderDate: '', totalQty: '', followUp: '', comments: '', leadType: ''
         });
     }
     // Go to the first page to show the new blank rows at the top
@@ -561,9 +580,9 @@ const exportBtn = document.getElementById('exportBtn');
 if (exportBtn) {
     exportBtn.onclick = () => {
         if (tableData.length === 0) return alert('No data to export');
-        const headers = ["Date", "Name", "Mobile No", "Company", "City", "State", "Platform", "Type", "Status", "Order Date", "Total Qty", "Follow-up", "Comments"];
+        const headers = ["Date", "Name", "Mobile No", "Company", "City", "State", "Platform", "Type", "Status", "Order Date", "Total Qty", "Follow-up", "Comments", "Lead Type"];
         const rows = tableData.map(r => [
-            r.date, r.name, r.mobile, r.company, r.city || '', r.state || '', r.platform, r.type, r.status, r.orderDate, r.totalQty, r.followUp, r.comments
+            r.date, r.name, r.mobile, r.company, r.city || '', r.state || '', r.platform, r.type, r.status, r.orderDate, r.totalQty, r.followUp, r.comments, r.leadType || ''
         ]);
         let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n" + rows.map(e => e.join(",")).join("\n");
         const encodedUri = encodeURI(csvContent);
@@ -897,9 +916,10 @@ if (generateAnalyticsBtn) {
     generateAnalyticsBtn.onclick = () => {
         const start = analyticsStartDate.value;
         const end = analyticsEndDate.value;
+        const leadVal = analyticsLeadType ? analyticsLeadType.value : 'ALL';
         if (!start || !end) return alert('Select Range');
         
-        const filtered = tableData.filter(r => r.date >= start && r.date <= end);
+        const filtered = tableData.filter(r => r.date >= start && r.date <= end && (leadVal === 'ALL' || r.leadType === leadVal));
         analyticsResults.classList.remove('hidden');
         analyticsTableHead.innerHTML = '';
         analyticsTableBody.innerHTML = '';
@@ -930,7 +950,7 @@ if (generateAnalyticsBtn) {
             tdPlat.textContent = p;
             tdPlat.style.cursor = 'pointer';
             tdPlat.onclick = () => {
-                if (searchInput) searchInput.value = `report:analytics:${start}:${end}:${p}:ALL`;
+                if (searchInput) searchInput.value = `report:analytics:${start}:${end}:${p}:ALL:${leadVal}`;
                 switchView('data-entry');
                 renderTable();
             };
@@ -949,7 +969,7 @@ if (generateAnalyticsBtn) {
                     tdCount.textContent = count;
                     tdCount.style.cursor = 'pointer';
                     tdCount.onclick = () => {
-                        if (searchInput) searchInput.value = `report:analytics:${start}:${end}:${p}:${s}`;
+                        if (searchInput) searchInput.value = `report:analytics:${start}:${end}:${p}:${s}:${leadVal}`;
                         switchView('data-entry');
                         renderTable();
                     };
@@ -968,7 +988,7 @@ if (generateAnalyticsBtn) {
             tdPlatTotal.textContent = platformTotal;
             tdPlatTotal.style.cursor = 'pointer';
             tdPlatTotal.onclick = () => {
-                if (searchInput) searchInput.value = `report:analytics:${start}:${end}:${p}:ALL`;
+                if (searchInput) searchInput.value = `report:analytics:${start}:${end}:${p}:ALL:${leadVal}`;
                 switchView('data-entry');
                 renderTable();
             };
@@ -986,7 +1006,7 @@ if (generateAnalyticsBtn) {
         tdGrand.textContent = 'GRAND TOTAL';
         tdGrand.style.cursor = 'pointer';
         tdGrand.onclick = () => {
-            if (searchInput) searchInput.value = `report:analytics:${start}:${end}:ALL:ALL`;
+            if (searchInput) searchInput.value = `report:analytics:${start}:${end}:ALL:ALL:${leadVal}`;
             switchView('data-entry');
             renderTable();
         };
@@ -1000,7 +1020,7 @@ if (generateAnalyticsBtn) {
             tdStatusTotal.textContent = statusTotals[s];
             tdStatusTotal.style.cursor = 'pointer';
             tdStatusTotal.onclick = () => {
-                if (searchInput) searchInput.value = `report:analytics:${start}:${end}:ALL:${s}`;
+                if (searchInput) searchInput.value = `report:analytics:${start}:${end}:ALL:${s}:${leadVal}`;
                 switchView('data-entry');
                 renderTable();
             };
@@ -1014,7 +1034,7 @@ if (generateAnalyticsBtn) {
         tdGrandTotal.textContent = grandTotal;
         tdGrandTotal.style.cursor = 'pointer';
         tdGrandTotal.onclick = () => {
-            if (searchInput) searchInput.value = `report:analytics:${start}:${end}:ALL:ALL`;
+            if (searchInput) searchInput.value = `report:analytics:${start}:${end}:ALL:ALL:${leadVal}`;
             switchView('data-entry');
             renderTable();
         };
