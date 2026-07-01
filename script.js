@@ -128,6 +128,17 @@ const navPerformance = document.getElementById('nav-performance');
 const navOrders = document.getElementById('nav-orders');
 const navRepeatEntry = document.getElementById('nav-repeat-entry');
 const navRepeatOrders = document.getElementById('nav-repeat-orders');
+const navAnalytics = document.getElementById('nav-analytics');
+
+// Analytics Elements
+const analyticsView = document.getElementById('analytics-view');
+const analyticsStartDate = document.getElementById('analytics-start-date');
+const analyticsEndDate = document.getElementById('analytics-end-date');
+const generateAnalyticsBtn = document.getElementById('generate-analytics-btn');
+const analyticsResults = document.getElementById('analytics-results');
+const analyticsTableHead = document.getElementById('analytics-table-head');
+const analyticsTableBody = document.getElementById('analytics-table-body');
+const analyticsTableFooter = document.getElementById('analytics-table-footer');
 
 // To Do Report Elements
 const reportStartDate = document.getElementById('report-start-date');
@@ -176,8 +187,8 @@ let activeConfigKey = '';
 function switchView(view) {
     currentView = view;
     localStorage.setItem(SAVE_KEY_VIEW, view);
-    [dataEntryView, reportsView, performanceView, orderReportView, repeatOrderReportView].forEach(v => v?.classList.add('hidden'));
-    [navDataEntry, navReports, navPerformance, navOrders, navRepeatEntry, navRepeatOrders].forEach(n => n?.classList.remove('active'));
+    [dataEntryView, reportsView, performanceView, orderReportView, repeatOrderReportView, analyticsView].forEach(v => v?.classList.add('hidden'));
+    [navDataEntry, navReports, navPerformance, navOrders, navRepeatEntry, navRepeatOrders, navAnalytics].forEach(n => n?.classList.remove('active'));
 
     const repeatCols = document.querySelectorAll('.repeat-col');
     if (view === 'repeat-entry') {
@@ -230,6 +241,13 @@ function switchView(view) {
         if (navRepeatOrders) navRepeatOrders.classList.add('active');
         viewTitle.textContent = 'Repeat Order Report';
         viewSubtitle.textContent = 'Summary of repeat orders by date';
+    } else if (view === 'analytics') {
+        tableData = mainData;
+        dataRef = db.ref('status_data');
+        analyticsView.classList.remove('hidden');
+        if (navAnalytics) navAnalytics.classList.add('active');
+        viewTitle.textContent = 'Analytics';
+        viewSubtitle.textContent = 'Platform-wise Work Report';
     }
 }
 
@@ -239,6 +257,7 @@ navPerformance.onclick = () => switchView('performance');
 navOrders.onclick = () => switchView('orders');
 if (navRepeatEntry) navRepeatEntry.onclick = () => switchView('repeat-entry');
 if (navRepeatOrders) navRepeatOrders.onclick = () => switchView('repeat-orders');
+if (navAnalytics) navAnalytics.onclick = () => switchView('analytics');
 
 signinForm.onsubmit = (e) => { e.preventDefault(); doLogin(e); };
 signupForm.onsubmit = (e) => { e.preventDefault(); doLogin(e); };
@@ -428,12 +447,14 @@ function renderTable() {
         displayData = [];
         originalIndices = [];
         const isReport = query.startsWith('report:');
-        let repType = '', rStart = '', rEnd = '';
+        let repType = '', rStart = '', rEnd = '', rPlatform = '', rStatus = '';
         if (isReport) {
             const parts = query.split(':');
             repType = parts[1];
             rStart = parts[2];
             rEnd = parts[3] || parts[2];
+            rPlatform = parts[4] || '';
+            rStatus = parts[5] || '';
         }
 
         for (let i = tableData.length - 1; i >= 0; i--) {
@@ -450,6 +471,14 @@ function renderTable() {
                                (row.orderDate || '').trim() !== '' && 
                                (row.totalQty || '').toString().trim() !== '' && 
                                (row.platform || '').toString().trim() !== '');
+                } else if (repType === 'analytics') {
+                    matches = (row.date >= rStart && row.date <= rEnd);
+                    if (rPlatform && rPlatform !== 'all') {
+                        matches = matches && ((row.platform || '').toLowerCase() === rPlatform);
+                    }
+                    if (rStatus && rStatus !== 'all') {
+                        matches = matches && ((row.status || '').toLowerCase() === rStatus);
+                    }
                 }
             } else {
                 const searchableText = `${row.name || ''} ${row.mobile || ''} ${row.company || ''} ${row.city || ''} ${row.state || ''} ${row.date || ''} ${row.status || ''} ${row.platform || ''} ${row.type || ''}`.toLowerCase();
@@ -861,6 +890,137 @@ if (generateRepeatOrderBtn) {
             };
             repeatOrderTableFooter.appendChild(trTotal);
         }
+    };
+}
+
+if (generateAnalyticsBtn) {
+    generateAnalyticsBtn.onclick = () => {
+        const start = analyticsStartDate.value;
+        const end = analyticsEndDate.value;
+        if (!start || !end) return alert('Select Range');
+        
+        const filtered = tableData.filter(r => r.date >= start && r.date <= end);
+        analyticsResults.classList.remove('hidden');
+        analyticsTableHead.innerHTML = '';
+        analyticsTableBody.innerHTML = '';
+        analyticsTableFooter.innerHTML = '';
+
+        const platforms = dropdownConfig.platforms || [];
+        const statuses = dropdownConfig.statuses || [];
+
+        let headerHtml = `<tr><th style="color: var(--primary);">Platform</th>`;
+        statuses.forEach(s => {
+            headerHtml += `<th style="color: var(--secondary); text-align: center;">${s}</th>`;
+        });
+        headerHtml += `<th style="color: var(--primary); text-align: center;">Total</th></tr>`;
+        analyticsTableHead.innerHTML = headerHtml;
+
+        let statusTotals = {};
+        statuses.forEach(s => statusTotals[s] = 0);
+        let grandTotal = 0;
+
+        platforms.forEach(p => {
+            let platformTotal = 0;
+            const platformData = filtered.filter(r => r.platform === p);
+            
+            const tr = document.createElement('tr');
+            
+            const tdPlat = document.createElement('td');
+            tdPlat.style.fontWeight = '600';
+            tdPlat.textContent = p;
+            tdPlat.style.cursor = 'pointer';
+            tdPlat.onclick = () => {
+                if (searchInput) searchInput.value = `report:analytics:${start}:${end}:${p}:ALL`;
+                switchView('data-entry');
+                renderTable();
+            };
+            tr.appendChild(tdPlat);
+
+            statuses.forEach(s => {
+                const count = platformData.filter(r => r.status === s).length;
+                platformTotal += count;
+                statusTotals[s] += count;
+                
+                const tdCount = document.createElement('td');
+                tdCount.style.textAlign = 'center';
+                if (count > 0) {
+                    tdCount.style.fontWeight = '800';
+                    tdCount.style.color = 'var(--text-main)';
+                    tdCount.textContent = count;
+                    tdCount.style.cursor = 'pointer';
+                    tdCount.onclick = () => {
+                        if (searchInput) searchInput.value = `report:analytics:${start}:${end}:${p}:${s}`;
+                        switchView('data-entry');
+                        renderTable();
+                    };
+                } else {
+                    tdCount.style.color = 'var(--text-muted)';
+                    tdCount.textContent = '-';
+                }
+                tr.appendChild(tdCount);
+            });
+            grandTotal += platformTotal;
+
+            const tdPlatTotal = document.createElement('td');
+            tdPlatTotal.style.textAlign = 'center';
+            tdPlatTotal.style.color = 'var(--primary)';
+            tdPlatTotal.style.fontWeight = '800';
+            tdPlatTotal.textContent = platformTotal;
+            tdPlatTotal.style.cursor = 'pointer';
+            tdPlatTotal.onclick = () => {
+                if (searchInput) searchInput.value = `report:analytics:${start}:${end}:${p}:ALL`;
+                switchView('data-entry');
+                renderTable();
+            };
+            tr.appendChild(tdPlatTotal);
+
+            analyticsTableBody.appendChild(tr);
+        });
+
+        const trTotal = document.createElement('tr');
+        
+        const tdGrand = document.createElement('td');
+        tdGrand.style.fontWeight = '700';
+        tdGrand.style.color = 'var(--primary)';
+        tdGrand.style.textAlign = 'right';
+        tdGrand.textContent = 'GRAND TOTAL';
+        tdGrand.style.cursor = 'pointer';
+        tdGrand.onclick = () => {
+            if (searchInput) searchInput.value = `report:analytics:${start}:${end}:ALL:ALL`;
+            switchView('data-entry');
+            renderTable();
+        };
+        trTotal.appendChild(tdGrand);
+
+        statuses.forEach(s => {
+            const tdStatusTotal = document.createElement('td');
+            tdStatusTotal.style.textAlign = 'center';
+            tdStatusTotal.style.color = 'var(--secondary)';
+            tdStatusTotal.style.fontWeight = '800';
+            tdStatusTotal.textContent = statusTotals[s];
+            tdStatusTotal.style.cursor = 'pointer';
+            tdStatusTotal.onclick = () => {
+                if (searchInput) searchInput.value = `report:analytics:${start}:${end}:ALL:${s}`;
+                switchView('data-entry');
+                renderTable();
+            };
+            trTotal.appendChild(tdStatusTotal);
+        });
+
+        const tdGrandTotal = document.createElement('td');
+        tdGrandTotal.style.textAlign = 'center';
+        tdGrandTotal.style.color = 'var(--primary)';
+        tdGrandTotal.style.fontWeight = '800';
+        tdGrandTotal.textContent = grandTotal;
+        tdGrandTotal.style.cursor = 'pointer';
+        tdGrandTotal.onclick = () => {
+            if (searchInput) searchInput.value = `report:analytics:${start}:${end}:ALL:ALL`;
+            switchView('data-entry');
+            renderTable();
+        };
+        trTotal.appendChild(tdGrandTotal);
+
+        analyticsTableFooter.appendChild(trTotal);
     };
 }
 
