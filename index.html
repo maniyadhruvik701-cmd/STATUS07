@@ -89,7 +89,7 @@
             <i class="fas fa-shopping-basket"></i>
             <span>Repeat Order Report</span>
           </div>
-          <div class="nav-item">
+          <div class="nav-item" id="nav-analytics">
             <i class="fas fa-chart-line"></i>
             <span>Analytics</span>
           </div>
@@ -299,6 +299,33 @@
                 </thead>
                 <tbody id="repeat-order-table-body"></tbody>
                 <tfoot id="repeat-order-table-footer" style="border-top: 2px solid var(--border);"></tfoot>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Analytics View -->
+        <section id="analytics-view" class="data-entry-container hidden">
+          <div class="action-bar glass-panel" style="padding: 20px; display: flex; gap: 20px; align-items: flex-end;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>Start Date</label>
+              <input type="date" id="analytics-start-date" class="input-field" style="width: 200px;">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label>End Date</label>
+              <input type="date" id="analytics-end-date" class="input-field" style="width: 200px;">
+            </div>
+            <button class="btn-primary" id="generate-analytics-btn" style="width: auto; margin-top: 0;">
+              <i class="fas fa-chart-bar"></i> Generate Analytics
+            </button>
+          </div>
+          <div id="analytics-results" class="hidden">
+            <div class="glass-panel" style="margin-top: 30px; padding: 20px;">
+              <table style="min-width: auto; width: 100%;">
+                <thead id="analytics-table-head">
+                </thead>
+                <tbody id="analytics-table-body"></tbody>
+                <tfoot id="analytics-table-footer" style="border-top: 2px solid var(--border);"></tfoot>
               </table>
             </div>
           </div>
