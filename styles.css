@@ -315,7 +315,7 @@ h3 {
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 1800px;
+    min-width: 2500px;
 }
 
 th {
@@ -343,6 +343,7 @@ tr:hover {
 .cell-input,
 textarea.cell-input {
     width: 100%;
+    min-width: 140px;
     background: transparent;
     border: none;
     color: white;
