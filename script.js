@@ -426,8 +426,8 @@ function createRow(data, actualIndex) {
             textarea.style.lineHeight = '1.5';
             
             const autoExpand = function() {
-                this.style.height = 'auto';
-                this.style.height = this.scrollHeight + 'px';
+                this.style.height = '1px';
+                this.style.height = (this.scrollHeight + 2) + 'px';
             };
             
             textarea.addEventListener('input', autoExpand);
@@ -595,6 +595,20 @@ addRowBtn.onclick = () => {
 
     saveData(); savePage(); renderTable();
 };
+
+const addOneRowBtn = document.getElementById('addOneRowBtn');
+if (addOneRowBtn) {
+    addOneRowBtn.onclick = () => {
+        const today = new Date().toISOString().split('T')[0];
+        tableData.push({
+            date: today, name: '', mobile: '', company: '', city: '', state: '', platform: '',
+            type: '', status: '',
+            orderDate: '', totalQty: '', followUp: '', comments: '', leadType: ''
+        });
+        currentPage = 1;
+        saveData(); savePage(); renderTable();
+    };
+}
 
 const clearAllBtn = document.getElementById('clearAllBtn');
 if (clearAllBtn) {
