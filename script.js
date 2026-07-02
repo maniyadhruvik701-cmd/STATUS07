@@ -45,14 +45,19 @@ let tableData = []; // Will be loaded from Firebase
 function fixDates(data) {
     const dateFields = ['date', 'orderDate', 'orderDate2', 'orderDate3', 'orderDate4', 'orderDate5', 'followUp'];
     let changed = false;
-    data.forEach(row => {
-        dateFields.forEach(field => {
-            if (row[field] && row[field].includes('0026')) {
-                row[field] = row[field].replace('0026', '2026');
-                changed = true;
-            }
+    try {
+        data.forEach(row => {
+            if (!row) return; // Skip null rows
+            dateFields.forEach(field => {
+                if (row[field] && typeof row[field] === 'string' && row[field].includes('0026')) {
+                    row[field] = row[field].replace('0026', '2026');
+                    changed = true;
+                }
+            });
         });
-    });
+    } catch (e) {
+        console.error("Error fixing dates:", e);
+    }
     return changed;
 }
 
@@ -61,6 +66,7 @@ let dataRef = db.ref('status_data');
 let mainData = [];
 let repeatData = [];
 let currentView = localStorage.getItem(SAVE_KEY_VIEW) || 'data-entry';
+let isDataLoaded = false;
 
 db.ref('status_data').on('value', (snapshot) => {
     const data = snapshot.val();
@@ -71,6 +77,7 @@ db.ref('status_data').on('value', (snapshot) => {
     if (currentView !== 'repeat-entry') {
         tableData = mainData;
         dataRef = db.ref('status_data');
+        isDataLoaded = true;
         renderTable();
     }
 });
@@ -84,11 +91,16 @@ db.ref('repeat_status_data').on('value', (snapshot) => {
     if (currentView === 'repeat-entry') {
         tableData = repeatData;
         dataRef = db.ref('repeat_status_data');
+        isDataLoaded = true;
         renderTable();
     }
 });
 
 function saveData() {
+    if (!isDataLoaded) {
+        console.warn("Attempted to save data before initial load completed. Save aborted to prevent data loss.");
+        return;
+    }
     // Save to Firebase Cloud
     // We use set() to overwrite the list with the new state
     dataRef.set(tableData).catch((error) => {
