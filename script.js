@@ -380,16 +380,16 @@ function createRow(data, actualIndex) {
         { key: 'state', type: 'text' },
         { key: 'platform', type: 'select', configKey: 'platforms', label: 'Platform' },
         { key: 'type', type: 'select', configKey: 'types', label: 'Type' },
+        { key: 'followUp', type: 'date' },
+        { key: 'comments', type: 'text' },
+        { key: 'leadType', type: 'select', configKey: 'leadTypes', label: 'Lead Type' },
         { key: 'status', type: 'select', configKey: 'statuses', label: 'Status' },
         { key: 'orderDate', type: 'date' },
         { key: 'orderDate2', type: 'date', repeatOnly: true },
         { key: 'orderDate3', type: 'date', repeatOnly: true },
         { key: 'orderDate4', type: 'date', repeatOnly: true },
         { key: 'orderDate5', type: 'date', repeatOnly: true },
-        { key: 'totalQty', type: 'number' },
-        { key: 'followUp', type: 'date' },
-        { key: 'comments', type: 'text' },
-        { key: 'leadType', type: 'select', configKey: 'leadTypes', label: 'Lead Type' }
+        { key: 'totalQty', type: 'number' }
     ];
     fields.forEach(f => {
         if (f.repeatOnly && currentView !== 'repeat-entry') return;
