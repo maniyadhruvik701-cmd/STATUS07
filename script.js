@@ -447,6 +447,39 @@ function createRow(data, actualIndex) {
         }
         tr.appendChild(td);
     });
+
+    // Delete Button
+    const tdAction = document.createElement('td');
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'btn-icon';
+    deleteBtn.innerHTML = '<i class="fas fa-trash-can"></i>';
+    deleteBtn.title = 'Delete Entry';
+    deleteBtn.style.color = '#ff4757'; // red color for delete
+    deleteBtn.style.background = 'rgba(255, 71, 87, 0.1)';
+    deleteBtn.style.border = 'none';
+    deleteBtn.style.borderRadius = '4px';
+    deleteBtn.style.cursor = 'pointer';
+    deleteBtn.style.padding = '8px 12px';
+    deleteBtn.style.display = 'flex';
+    deleteBtn.style.alignItems = 'center';
+    deleteBtn.style.justifyContent = 'center';
+    deleteBtn.onclick = () => {
+        let isEmpty = true;
+        for (let key in data) {
+            if (data[key] && key !== 'date') {
+                isEmpty = false;
+                break;
+            }
+        }
+        if (isEmpty || confirm('Are you sure you want to delete this entry?')) {
+            tableData.splice(actualIndex, 1);
+            saveData();
+            renderTable();
+        }
+    };
+    tdAction.appendChild(deleteBtn);
+    tr.appendChild(tdAction);
+
     return tr;
 }
 
@@ -572,6 +605,40 @@ if (clearAllBtn) {
             saveData();
             savePage();
             renderTable();
+        }
+    };
+}
+
+const bulkDeleteBtn = document.getElementById('bulkDeleteBtn');
+if (bulkDeleteBtn) {
+    bulkDeleteBtn.onclick = () => {
+        const range = prompt('Enter Sr. No range to delete (e.g. 500-550):');
+        if (!range) return;
+        
+        const parts = range.split('-');
+        if (parts.length === 2) {
+            const startSr = parseInt(parts[0].trim());
+            const endSr = parseInt(parts[1].trim());
+            
+            if (isNaN(startSr) || isNaN(endSr) || startSr > endSr || startSr < 1) {
+                return alert('Invalid range! Please use format like 500-550 where first number is smaller or equal to second.');
+            }
+            
+            if (confirm(`Are you sure you want to delete entries from Sr. No ${startSr} to ${endSr}?`)) {
+                const startIndex = startSr - 1;
+                const count = (endSr - startSr) + 1;
+                
+                if (startIndex >= tableData.length) {
+                    return alert('Starting Sr. No is out of bounds!');
+                }
+                
+                tableData.splice(startIndex, count);
+                saveData();
+                renderTable();
+                alert(`Successfully deleted ${count} entries.`);
+            }
+        } else {
+            alert('Invalid format. Please use a format like 500-550.');
         }
     };
 }
